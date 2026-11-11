@@ -83,6 +83,7 @@ vendor/bin/rector process src             # 应用变更
 | `Phalcon\Version` | `Phalcon\Support\Version` |
 | `Phalcon\Acl\ComponentAware` | `Phalcon\Acl\ComponentAwareInterface` |
 | `Phalcon\Acl\RoleAware` | `Phalcon\Acl\RoleAwareInterface` |
+| `Phalcon\Exception` | `\Exception`（v5 已移除根级异常，[cphalcon#15800](https://github.com/phalcon/cphalcon/issues/15800)） |
 
 ### 方法重命名（RenameMethodRector）
 
@@ -160,6 +161,22 @@ $doctype = \Phalcon\Html\Helper\Doctype::HTML5;
 
 覆盖：22 个输入字段方法（`textField`/`emailField`/`checkField`/`submitButton` 等，字符串形态与字面量数组形态自动拆解为 `(name, value, attributes)`）、`friendlyText()` → `friendlyTitle()`（签名一致）、11 个 `HTML*/XHTML*` doctype 常量 → `Doctype::` 常量。
 
+- `RemovedClassUsageHintRector` — 对仍引用 v5 中**已移除且无自动迁移方案**类（`Phalcon\Kernel` 等）的语句 / `use` 导入添加 TODO 提示注释，让手工迁移点在 rector diff 中可见：
+
+```php
+// v4
+use Phalcon\Kernel;
+\Phalcon\Kernel::preFlightChecks($container, $eventsManager);
+
+// 迁移后（加提示，不自动改写）
+// TODO Phalcon v5: "Phalcon\Kernel" was removed in Phalcon v5 without a replacement - inline the bootstrap/pre-flight checks it performed manually
+use Phalcon\Kernel;
+// TODO Phalcon v5: "Phalcon\Kernel" was removed in Phalcon v5 without a replacement - inline the bootstrap/pre-flight checks it performed manually
+\Phalcon\Kernel::preFlightChecks($container, $eventsManager);
+```
+
+> 注：提示清单刻意保持精简——有迁移方案的类都由对应规则处理（重命名、TagFactory、Support\Helper 等），避免与其他规则产生冲突注释。`Phalcon\Exception` 属于"有迁移方案"（替换为 `\Exception`），由 `RenameClassRector` 处理，不在此列。
+
 **明确不迁移**（参数语义非确定或依赖 DI/全局状态，机械替换会产出错代码，需手动改写）：
 - `linkTo()`、`image()`、`stylesheetLink()`、`javascriptInclude()`、`select()`/`selectStatic()`、`form()`/`endForm()`、`tagHtml()`/`tagHtmlClose()`、`renderAttributes()`
 - 状态方法：`setTitle()`/`getTitle()` 系列、`setDefault()`/`getValue()` 系列、`setDocType()`/`getDocType()`
@@ -224,7 +241,7 @@ $env:PHPRC = "d:\opt\htdocs\Phalcon4To5Rector\php-config"
 - [x] `Phalcon\Tag` 确定性子集 → `Phalcon\Html\TagFactory` 迁移规则 ✅（`linkTo`/`image`/`select` 等复杂方法仍需手动改写）
 - [x] `Phalcon\Assets\Manager` 构造器注入 `Phalcon\Html\TagFactory` ✅
 - [x] `Phalcon\Text` / `Phalcon\Helper` → `Phalcon\Support\Helper\*` 静态调用迁移 ✅
-- [ ] 对 v5 中已移除且无自动迁移方案的类（`Phalcon\Kernel` 等）输出提示
+- [x] 对 v5 中已移除且无自动迁移方案的类（`Phalcon\Kernel` 等）输出提示 ✅
 - [x] 接入 `rector/extension-installer` 实现规则集自动注册 ✅
 - [ ] 发布到 Packagist，并尝试收录进 `rectorphp` 官方组织
 

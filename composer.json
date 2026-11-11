@@ -1,0 +1,43 @@
+{
+    "name": "phalcon4to5/rector",
+    "type": "rector-extension",
+    "license": "MIT",
+    "description": "Rector upgrade rules for Phalcon Framework 4 to 5",
+    "require": {
+        "php": ">=8.1",
+        "ext-xml": "*"
+    },
+    "require-dev": {
+        "phalcon/ide-stubs": "^5.0",
+        "phpunit/phpunit": "^11.5",
+        "rector/rector": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Phalcon4To5\\Rector\\": [
+                "src",
+                "rules"
+            ]
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Phalcon4To5\\Rector\\Tests\\": "rules-tests"
+        }
+    },
+    "extra": {
+        "rector": {
+            "includes": [
+                "config/sets/phalcon50.php"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "rector/extension-installer": true
+        }
+    }
+}
