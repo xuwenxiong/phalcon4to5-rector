@@ -196,7 +196,7 @@ use Phalcon\Kernel;
 
 ### 环境要求
 
-- PHP 8.1+
+- PHP ^8.1
 - Composer
 
 ### 目录结构
@@ -226,7 +226,7 @@ vendor/bin/phpunit --colors=never
 
 ### 本地开发环境（Windows）
 
-本项目用 **PHP 8.4** 开发与测试（`rector/rector` 需要 PHP ≥ 8.2，PHP 8.4 已验证 20 个测试全绿）。
+本项目用 **PHP 8.4** 开发与测试（PHP 8.4 已验证 20 个测试全绿；包要求 PHP 8.1+，见 `composer.json`）。
 
 ```powershell
 Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
