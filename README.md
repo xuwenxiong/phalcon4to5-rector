@@ -140,14 +140,38 @@ $endsWith = Helper\Str::endsWith('hello world', 'world');
 $first = Helper\Arr::first($items);
 $type = Text::RANDOM_ALPHA;
 
-// 迁移后
-$camel = (new \Phalcon\Support\HelperFactory())->camelize('foo_bar');
-$endsWith = (new \Phalcon\Support\HelperFactory())->endsWith('hello world', 'world');
-$first = (new \Phalcon\Support\HelperFactory())->first($items);
+// 迁移后（use 导入自动补齐）
+use Phalcon\Support\HelperFactory;
+
+$camel = $helperFactory->camelize('foo_bar');
+$endsWith = $helperFactory->endsWith('hello world', 'world');
+$first = $helperFactory->first($items);
 $type = \Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA;
 ```
 
 > 注：v4 `Helper\Number::between()` → v5 工厂方法 `isBetween()`（方法名大小写不敏感匹配）；`Phalcon\Helper\File` 在 v4 中不存在，不做迁移。未映射的调用（如动态方法名 `$class::$method()`）原样跳过。`RANDOM_*` 常量无工厂代理，仍指向 `Helper\Str\Random` 类常量。
+
+- `DeduplicateHelperFactoryRector` — 同一方法体内出现 ≥ 2 次内联 `new HelperFactory()` 时，自动提取为局部变量复用（单次调用保持内联）；方法内已存在同名变量或调用位于嵌套普通 `function` 内时整体跳过：
+
+```php
+// 提取前
+$camel = (new HelperFactory())->camelize($a);
+$upper = (new HelperFactory())->upper($b);
+
+// 提取后
+$helperFactory = new HelperFactory();
+$camel = $helperFactory->camelize($a);
+$upper = $helperFactory->upper($b);
+```
+
+> 💡 **生产环境建议改用 DI 注册服务**：`HelperFactory` 是无状态的，在 Phalcon 5 的 DI 容器中注册为单例服务并注入到需要的类，可全应用复用一个实例，避免逐方法提取变量：
+>
+> ```php
+> $di->setShared('helperFactory', HelperFactory::class);
+> // 类中通过构造器注入 / $di->get('helperFactory') 使用
+> ```
+>
+> 规则输出是机械改写的安全下限，DI 化属于应用架构决策，由你自行决定。
 
 - `TagToTagFactoryRector` — 将已移除的 `Phalcon\Tag` 的**确定性子集**迁移为 `$tagFactory->...` 调用（`$tagFactory` 为作用域内的 `Phalcon\Html\TagFactory` 变量，是本包的显式约定）：
 
@@ -202,6 +226,7 @@ use Phalcon\Encryption\Crypt as PhalconCrypt;
 
 - **`Phalcon\Tag` 仅迁移确定性子集**：输入字段方法、`friendlyText` 和 doctype 常量已自动迁移；`linkTo`、`image`、`select`、`form` 等参数语义非确定的方法需手动改写（见上方 `TagToTagFactoryRector` 的说明）。`Phalcon\Text` / `Phalcon\Helper` 静态调用已全量迁移，`Phalcon\Exception` 已自动重命名，`Phalcon\Kernel` 已自动添加 TODO 提示。
 - **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。`use` 导入重命名（`RenameUseImportsRector`）为纯配置驱动，不受此限制。
+- **规则集开启了 `importNames()`**：迁移引入的 FQCN 会自动补 `use` 导入并缩写为短名（如 `new \Phalcon\Autoload\Loader()` → `use Phalcon\Autoload\Loader;` + `new Loader()`）。这也会影响用户代码中原本的 FQCN 写法（统一补导入），如不需要可在自己的 `rector.php` 中覆盖。
 
 ## 开发
 

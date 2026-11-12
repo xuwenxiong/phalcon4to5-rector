@@ -16,12 +16,16 @@ final class SomeClass
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Phalcon50Set\Fixture;
 
+use Phalcon\Autoload\Loader;
+use Phalcon\Encryption\Crypt;
+use Phalcon\Encryption\Security;
+
 final class SomeClass
 {
     public function run(): void
     {
-        $loader = new \Phalcon\Autoload\Loader();
-        $crypt = new \Phalcon\Encryption\Crypt();
-        $security = new \Phalcon\Encryption\Security();
+        $loader = new Loader();
+        $crypt = new Crypt();
+        $security = new Security();
     }
 }

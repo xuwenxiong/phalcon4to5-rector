@@ -7,6 +7,7 @@ use Phalcon4To5\Rector\Phalcon5\Rector\New_\AssetsManagerTagFactoryInjectionRect
 use Phalcon4To5\Rector\Phalcon5\Rector\New_\CacheAdapterFactoryConstructorInjectionRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\StaticCall\TagToTagFactoryRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\StaticCall\TextAndHelperToSupportHelperRector;
+use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\DeduplicateHelperFactoryRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\RemovedClassUsageHintRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
@@ -60,5 +61,10 @@ return static function (RectorConfig $rectorConfig): void {
         TagToTagFactoryRector::class,
         RemovedClassUsageHintRector::class,
         RenameUseImportsRector::class,
+        DeduplicateHelperFactoryRector::class,
     ]);
+
+    // auto-add `use` imports for the FQCNs these rules introduce
+    // (e.g. `new \Phalcon\Autoload\Loader()` -> `use Phalcon\Autoload\Loader;` + `new Loader()`)
+    $rectorConfig->importNames();
 };
