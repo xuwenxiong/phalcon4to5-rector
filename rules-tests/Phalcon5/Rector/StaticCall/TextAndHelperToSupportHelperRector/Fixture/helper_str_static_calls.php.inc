@@ -24,12 +24,12 @@ final class StrCalls
 {
     public function run(): void
     {
-        $vowels = (new \Phalcon\Support\Helper\Str\CountVowels())->__invoke('hello');
-        $decap = (new \Phalcon\Support\Helper\Str\Decapitalize())->__invoke('Hello');
-        $isLower = (new \Phalcon\Support\Helper\Str\IsLower())->__invoke('abc');
-        $isPalindrome = (new \Phalcon\Support\Helper\Str\IsPalindrome())->__invoke('racecar');
-        $kebab = (new \Phalcon\Support\Helper\Str\Dynamic())->__invoke('text_{id}_{name}', ['id' => 1]);
-        $between = (new \Phalcon\Support\Helper\Str\FirstBetween())->__invoke('[a][b]', '[', ']');
-        $interpolated = (new \Phalcon\Support\Helper\Str\Includes())->__invoke('hello world', 'wor');
+        $vowels = (new \Phalcon\Support\HelperFactory())->countVowels('hello');
+        $decap = (new \Phalcon\Support\HelperFactory())->decapitalize('Hello');
+        $isLower = (new \Phalcon\Support\HelperFactory())->isLower('abc');
+        $isPalindrome = (new \Phalcon\Support\HelperFactory())->isPalindrome('racecar');
+        $kebab = (new \Phalcon\Support\HelperFactory())->dynamic('text_{id}_{name}', ['id' => 1]);
+        $between = (new \Phalcon\Support\HelperFactory())->firstBetween('[a][b]', '[', ']');
+        $interpolated = (new \Phalcon\Support\HelperFactory())->includes('hello world', 'wor');
     }
 }

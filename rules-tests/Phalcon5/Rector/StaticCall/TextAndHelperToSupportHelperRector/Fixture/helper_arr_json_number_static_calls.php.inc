@@ -30,18 +30,18 @@ final class ArrAndOthers
 {
     public function run(): void
     {
-        $first = (new \Phalcon\Support\Helper\Arr\First())->__invoke($items);
-        $firstKey = (new \Phalcon\Support\Helper\Arr\FirstKey())->__invoke($items);
-        $last = (new \Phalcon\Support\Helper\Arr\Last())->__invoke($items);
-        $value = (new \Phalcon\Support\Helper\Arr\Get())->__invoke($items, 'id', 0);
-        $whitelisted = (new \Phalcon\Support\Helper\Arr\Whitelist())->__invoke($items, ['id', 'name']);
-        $grouped = (new \Phalcon\Support\Helper\Arr\Group())->__invoke($items, fn ($row) => $row['type']);
-        $isUnique = (new \Phalcon\Support\Helper\Arr\IsUnique())->__invoke($items);
-        $sliced = (new \Phalcon\Support\Helper\Arr\SliceLeft())->__invoke($items, 2);
+        $first = (new \Phalcon\Support\HelperFactory())->first($items);
+        $firstKey = (new \Phalcon\Support\HelperFactory())->firstKey($items);
+        $last = (new \Phalcon\Support\HelperFactory())->last($items);
+        $value = (new \Phalcon\Support\HelperFactory())->get($items, 'id', 0);
+        $whitelisted = (new \Phalcon\Support\HelperFactory())->whitelist($items, ['id', 'name']);
+        $grouped = (new \Phalcon\Support\HelperFactory())->group($items, fn ($row) => $row['type']);
+        $isUnique = (new \Phalcon\Support\HelperFactory())->isUnique($items);
+        $sliced = (new \Phalcon\Support\HelperFactory())->sliceLeft($items, 2);
 
-        $json = (new \Phalcon\Support\Helper\Json\Encode())->__invoke($data, 0, 512);
-        $decoded = (new \Phalcon\Support\Helper\Json\Decode())->__invoke($json, true);
+        $json = (new \Phalcon\Support\HelperFactory())->encode($data, 0, 512);
+        $decoded = (new \Phalcon\Support\HelperFactory())->decode($json, true);
 
-        $inRange = (new \Phalcon\Support\Helper\Number\IsBetween())->__invoke(5, 1, 10);
+        $inRange = (new \Phalcon\Support\HelperFactory())->isBetween(5, 1, 10);
     }
 }

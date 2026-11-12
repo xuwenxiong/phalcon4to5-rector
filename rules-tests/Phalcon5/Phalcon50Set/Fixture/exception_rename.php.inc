@@ -20,7 +20,7 @@ final class ExceptionUsages
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Phalcon50Set\Fixture;
 
-use Phalcon\Exception;
+use Exception;
 
 final class ExceptionUsages
 {

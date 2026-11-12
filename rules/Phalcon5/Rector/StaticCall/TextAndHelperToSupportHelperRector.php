@@ -21,11 +21,14 @@ use Rector\Rector\AbstractRector;
  * `Phalcon\Support\Helper\*`, which are no longer static — each helper is a
  * class with an `__invoke()` method and no constructor arguments.
  *
- * This rule rewrites static calls into instance calls:
+ * The idiomatic v5 entry point is Phalcon\Support\HelperFactory, whose __call
+ * proxies each helper by method name. This rule rewrites static calls into
+ * factory calls (factory method name = lcfirst of the helper class short name):
  *
- *      Phalcon\Text::camelize('foo_bar')                → (new Phalcon\Support\Helper\Str\Camelize())->__invoke('foo_bar')
- *      Phalcon\Helper\Str::endsWith('a', 'b')           → (new Phalcon\Support\Helper\Str\EndsWith())->__invoke('a', 'b')
- *      Phalcon\Helper\Arr::whiteList($arr, ['id'])      → (new Phalcon\Support\Helper\Arr\Whitelist())->__invoke($arr, ['id'])
+ *      Phalcon\Text::camelize('foo_bar')                → (new Phalcon\Support\HelperFactory())->camelize('foo_bar')
+ *      Phalcon\Helper\Str::endsWith('a', 'b')           → (new Phalcon\Support\HelperFactory())->endsWith('a', 'b')
+ *      Phalcon\Helper\Arr::whiteList($arr, ['id'])      → (new Phalcon\Support\HelperFactory())->whitelist($arr, ['id'])
+ *      Phalcon\Helper\Number::between(5, 1, 10)         → (new Phalcon\Support\HelperFactory())->isBetween(5, 1, 10)
  *      Phalcon\Text::RANDOM_ALPHA                       → Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA
  *
  * Method names are matched case-insensitively (v4 used camelCase, the v5 class
@@ -165,10 +168,13 @@ final class TextAndHelperToSupportHelperRector extends AbstractRector
             return null;
         }
 
-        // v5 helpers are instance classes: (new Target())->__invoke(...)
+        // v5 idiomatic entry point: HelperFactory proxies the helper by
+        // method name (lcfirst of the helper class short name)
+        $shortClassName = substr($targetClass, (int) strrpos($targetClass, '\\') + 1);
+
         return new MethodCall(
-            new New_(new FullyQualified($targetClass)),
-            new Identifier('__invoke'),
+            new New_(new FullyQualified('Phalcon\Support\HelperFactory')),
+            new Identifier(lcfirst($shortClassName)),
             $node->args
         );
     }
@@ -198,7 +204,7 @@ final class TextAndHelperToSupportHelperRector extends AbstractRector
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Migrate removed Phalcon\Text and Phalcon\Helper\* static helpers to Phalcon\Support\Helper\* instance classes (__invoke)',
+            'Migrate removed Phalcon\Text and Phalcon\Helper\* static helpers to Phalcon\Support\HelperFactory method calls',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
@@ -210,10 +216,10 @@ $type = Phalcon\Text::RANDOM_ALPHA;
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$camel = (new Phalcon\Support\Helper\Str\Camelize())->__invoke('foo_bar');
-$endsWith = (new Phalcon\Support\Helper\Str\EndsWith())->__invoke('hello world', 'world');
-$first = (new Phalcon\Support\Helper\Arr\First())->__invoke($items);
-$json = (new Phalcon\Support\Helper\Json\Encode())->__invoke($data);
+$camel = (new Phalcon\Support\HelperFactory())->camelize('foo_bar');
+$endsWith = (new Phalcon\Support\HelperFactory())->endsWith('hello world', 'world');
+$first = (new Phalcon\Support\HelperFactory())->first($items);
+$json = (new Phalcon\Support\HelperFactory())->encode($data);
 $type = Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA;
 CODE_SAMPLE
                 ),

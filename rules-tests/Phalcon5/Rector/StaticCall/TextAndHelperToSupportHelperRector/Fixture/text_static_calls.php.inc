@@ -28,16 +28,16 @@ final class TextCalls
 {
     public function run(): void
     {
-        $camel = (new \Phalcon\Support\Helper\Str\Camelize())->__invoke('foo_bar');
-        $uncamel = (new \Phalcon\Support\Helper\Str\Uncamelize())->__invoke('FooBar');
-        $endsWith = (new \Phalcon\Support\Helper\Str\EndsWith())->__invoke('hello world', 'world');
-        $startsWith = (new \Phalcon\Support\Helper\Str\StartsWith())->__invoke('hello world', 'hello');
-        $random = (new \Phalcon\Support\Helper\Str\Random())->__invoke(\Phalcon\Support\Helper\Str\Random::RANDOM_ALNUM, 12);
-        $lower = (new \Phalcon\Support\Helper\Str\Lower())->__invoke('SOME TEXT');
-        $upper = (new \Phalcon\Support\Helper\Str\Upper())->__invoke('some text');
-        $concat = (new \Phalcon\Support\Helper\Str\Concat())->__invoke('/', '/var/log', 'app.log');
-        $slashed = (new \Phalcon\Support\Helper\Str\ReduceSlashes())->__invoke('app//models///User.php');
-        $humanized = (new \Phalcon\Support\Helper\Str\Humanize())->__invoke('some_field_name');
+        $camel = (new \Phalcon\Support\HelperFactory())->camelize('foo_bar');
+        $uncamel = (new \Phalcon\Support\HelperFactory())->uncamelize('FooBar');
+        $endsWith = (new \Phalcon\Support\HelperFactory())->endsWith('hello world', 'world');
+        $startsWith = (new \Phalcon\Support\HelperFactory())->startsWith('hello world', 'hello');
+        $random = (new \Phalcon\Support\HelperFactory())->random(\Phalcon\Support\Helper\Str\Random::RANDOM_ALNUM, 12);
+        $lower = (new \Phalcon\Support\HelperFactory())->lower('SOME TEXT');
+        $upper = (new \Phalcon\Support\HelperFactory())->upper('some text');
+        $concat = (new \Phalcon\Support\HelperFactory())->concat('/', '/var/log', 'app.log');
+        $slashed = (new \Phalcon\Support\HelperFactory())->reduceSlashes('app//models///User.php');
+        $humanized = (new \Phalcon\Support\HelperFactory())->humanize('some_field_name');
         $type = \Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA;
     }
 }

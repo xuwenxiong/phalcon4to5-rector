@@ -131,7 +131,7 @@ $assets = new Manager(new TagFactory(new Escaper()));
 $assets = new Manager(new TagFactory(new Escaper()), ['sourceBasePath' => '/src']);
 ```
 
-- `TextAndHelperToSupportHelperRector` — 将已移除的 `Phalcon\Text` / `Phalcon\Helper\*` 静态调用迁移为 `Phalcon\Support\Helper\*` 实例调用（v5 Helper 不再是静态类，改为 `__invoke`），共映射 51 个方法 + 6 个 `RANDOM_*` 常量：
+- `TextAndHelperToSupportHelperRector` — 将已移除的 `Phalcon\Text` / `Phalcon\Helper\*` 静态调用迁移为 v5 官方推荐的 `Phalcon\Support\HelperFactory` 方法调用（工厂 `__call` 按方法名代理各 helper，方法名 = helper 类名的 lcfirst），共映射 51 个方法 + 6 个 `RANDOM_*` 常量：
 
 ```php
 // v4
@@ -141,13 +141,13 @@ $first = Helper\Arr::first($items);
 $type = Text::RANDOM_ALPHA;
 
 // 迁移后
-$camel = (new \Phalcon\Support\Helper\Str\Camelize())->__invoke('foo_bar');
-$endsWith = (new \Phalcon\Support\Helper\Str\EndsWith())->__invoke('hello world', 'world');
-$first = (new \Phalcon\Support\Helper\Arr\First())->__invoke($items);
+$camel = (new \Phalcon\Support\HelperFactory())->camelize('foo_bar');
+$endsWith = (new \Phalcon\Support\HelperFactory())->endsWith('hello world', 'world');
+$first = (new \Phalcon\Support\HelperFactory())->first($items);
 $type = \Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA;
 ```
 
-> 注：v4 `Helper\Number::between()` → v5 `Number\IsBetween`（方法名大小写不敏感匹配）；`Phalcon\Helper\File` 在 v4 中不存在，不做迁移。未映射的调用（如动态方法名 `$class::$method()`）原样跳过。
+> 注：v4 `Helper\Number::between()` → v5 工厂方法 `isBetween()`（方法名大小写不敏感匹配）；`Phalcon\Helper\File` 在 v4 中不存在，不做迁移。未映射的调用（如动态方法名 `$class::$method()`）原样跳过。`RANDOM_*` 常量无工厂代理，仍指向 `Helper\Str\Random` 类常量。
 
 - `TagToTagFactoryRector` — 将已移除的 `Phalcon\Tag` 的**确定性子集**迁移为 `$tagFactory->...` 调用（`$tagFactory` 为作用域内的 `Phalcon\Html\TagFactory` 变量，是本包的显式约定）：
 
@@ -181,6 +181,18 @@ use Phalcon\Kernel;
 
 > 注：提示清单刻意保持精简——有迁移方案的类都由对应规则处理（重命名、TagFactory、Support\Helper 等），避免与其他规则产生冲突注释。`Phalcon\Exception` 属于"有迁移方案"（替换为 `\Exception`），由 `RenameClassRector` 处理，不在此列。
 
+- `RenameUseImportsRector` — 改写类重命名后残留的 `use` 导入语句（Rector 2.x 的 `RenameClassRector` 只重命名内联引用，旧导入会留在文件顶部）。与 `RenameClassRector` 共享同一份映射表（`PhalconClassRenames::MAP`），纯配置驱动、不依赖类反射，别名导入的别名原样保留：
+
+```php
+// 迁移前
+use Phalcon\Loader;
+use Phalcon\Crypt as PhalconCrypt;
+
+// 迁移后
+use Phalcon\Autoload\Loader;
+use Phalcon\Encryption\Crypt as PhalconCrypt;
+```
+
 **明确不迁移**（参数语义非确定或依赖 DI/全局状态，机械替换会产出错代码，需手动改写）：
 - `linkTo()`、`image()`、`stylesheetLink()`、`javascriptInclude()`、`select()`/`selectStatic()`、`form()`/`endForm()`、`tagHtml()`/`tagHtmlClose()`、`renderAttributes()`
 - 状态方法：`setTitle()`/`getTitle()` 系列、`setDefault()`/`getValue()` 系列、`setDocType()`/`getDocType()`
@@ -188,9 +200,8 @@ use Phalcon\Kernel;
 
 ## 已知限制
 
-- **Rector 2.x 不会自动更新 `use` 导入语句**：类重命名采用内联全限定名替换（`new Loader()` → `new \Phalcon\Autoload\Loader()`），旧的 `use Phalcon\Loader;` 会保留在文件顶部。功能上没问题（编译正确），但建议重跑后手动清理无用 import。
 - **`Phalcon\Tag` 仅迁移确定性子集**：输入字段方法、`friendlyText` 和 doctype 常量已自动迁移；`linkTo`、`image`、`select`、`form` 等参数语义非确定的方法需手动改写（见上方 `TagToTagFactoryRector` 的说明）。`Phalcon\Text` / `Phalcon\Helper` 静态调用已全量迁移，`Phalcon\Exception` 已自动重命名，`Phalcon\Kernel` 已自动添加 TODO 提示。
-- **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。
+- **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。`use` 导入重命名（`RenameUseImportsRector`）为纯配置驱动，不受此限制。
 
 ## 开发
 
