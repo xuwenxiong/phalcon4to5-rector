@@ -3,6 +3,12 @@
     "type": "rector-extension",
     "license": "MIT",
     "description": "Rector upgrade rules for Phalcon Framework 4 to 5",
+    "authors": [
+        {
+            "name": "xuwenxiong",
+            "homepage": "https://github.com/xuwenxiong"
+        }
+    ],
     "require": {
         "php": ">=8.1",
         "ext-xml": "*"

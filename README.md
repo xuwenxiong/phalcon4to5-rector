@@ -2,7 +2,11 @@
 
 基于 [Rector](https://getrector.com/) 的 Phalcon Framework 4 → 5 自动升级规则集。
 
+**作者**：[xuwenxiong](https://github.com/xuwenxiong)
+
 Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，实现 Phalcon 5 [官方升级指南](https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md) 中的破坏性变更，让应用代码升级尽可能自动化。
+
+> ⚠️ **开发测试阶段**：本项目目前处于开发测试阶段，规则覆盖度和行为仍在迭代验证中，**暂不能用于生产**。使用前请务必先 `--dry-run` 预览全部变更并人工审查，再应用到代码。
 
 ## 功能
 
@@ -185,7 +189,7 @@ use Phalcon\Kernel;
 ## 已知限制
 
 - **Rector 2.x 不会自动更新 `use` 导入语句**：类重命名采用内联全限定名替换（`new Loader()` → `new \Phalcon\Autoload\Loader()`），旧的 `use Phalcon\Loader;` 会保留在文件顶部。功能上没问题（编译正确），但建议重跑后手动清理无用 import。
-- **已移除的类不处理**：`Phalcon\Tag`、`Phalcon\Text`、`Phalcon\Helper`、`Phalcon\Exception`、`Phalcon\Kernel` 在 v5 已删除，需要自定义规则迁移到 `Phalcon\Html\Helper\*` / `Phalcon\Support\Helper\*`（尚未实现，欢迎 PR）。
+- **`Phalcon\Tag` 仅迁移确定性子集**：输入字段方法、`friendlyText` 和 doctype 常量已自动迁移；`linkTo`、`image`、`select`、`form` 等参数语义非确定的方法需手动改写（见上方 `TagToTagFactoryRector` 的说明）。`Phalcon\Text` / `Phalcon\Helper` 静态调用已全量迁移，`Phalcon\Exception` 已自动重命名，`Phalcon\Kernel` 已自动添加 TODO 提示。
 - **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。
 
 ## 开发
@@ -206,7 +210,6 @@ use Phalcon\Kernel;
 ├── rules-tests/
 │   ├── Phalcon5/Phalcon50Set/                 # 规则集整体测试
 │   └── Phalcon5/Rector/New_/.../              # 单条规则测试
-└── php-config/php.ini                         # 本机 PHP 8.2 CLI 开发配置
 ```
 
 ### 测试约定（Rector 社区惯例）
@@ -221,19 +224,18 @@ use Phalcon\Kernel;
 vendor/bin/phpunit --colors=never
 ```
 
-### 本地开发环境（phpstudy 用户）
+### 本地开发环境（Windows）
 
-phpstudy 生成的 `php.ini` 使用 PHP7 语法（`track_errors`），在 PHP 8 下会致命错误。本仓库提供干净的 CLI 配置 `php-config/php.ini`，所有命令都应带 `-c` 参数：
+本项目用 **PHP 8.4** 开发与测试（`rector/rector` 需要 PHP ≥ 8.2，PHP 8.4 已验证 20 个测试全绿）。
 
 ```powershell
 Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
 
 # 运行测试
-& "D:\phpstudy_pro\Extensions\php\php8.2.9nts\php.exe" -c "d:\opt\htdocs\Phalcon4To5Rector\php-config" "vendor\phpunit\phpunit\phpunit" --colors=never
+& "D:\software\php\php8.4.27\php.exe" "vendor\phpunit\phpunit\phpunit" --colors=never
 
-# 运行 rector CLI（必须设置 PHPRC，否则并行子进程会读取 PHP7 的全局 ini 报错）
-$env:PHPRC = "d:\opt\htdocs\Phalcon4To5Rector\php-config"
-& "D:\phpstudy_pro\Extensions\php\php8.2.9nts\php.exe" -c "d:\opt\htdocs\Phalcon4To5Rector\php-config" "vendor\rector\rector\bin\rector" process "tmp-debug\sample.php" --config "config\sets\phalcon50.php" --no-progress-bar
+# 运行 rector CLI 处理你自己的项目
+& "D:\software\php\php8.4.27\php.exe" "vendor\rector\rector\bin\rector" process src --config "config\sets\phalcon50.php" --no-progress-bar
 ```
 
 ## Roadmap
