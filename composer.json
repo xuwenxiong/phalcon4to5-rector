@@ -1,5 +1,5 @@
 {
-    "name": "phalcon4to5/rector",
+    "name": "xuwenxiong/phalcon4to5-rector",
     "type": "rector-extension",
     "license": "MIT",
     "description": "Rector upgrade rules for Phalcon Framework 4 to 5",

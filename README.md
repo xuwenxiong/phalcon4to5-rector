@@ -17,7 +17,7 @@ Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-
 ## 安装
 
 ```bash
-composer require --dev phalcon4to5/rector
+composer require --dev xuwenxiong/phalcon4to5-rector
 ```
 
 ## 使用
@@ -49,7 +49,7 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     $rectorConfig->sets([
-        __DIR__ . '/vendor/phalcon4to5/rector/config/sets/phalcon50.php',
+        __DIR__ . '/vendor/xuwenxiong/phalcon4to5-rector/config/sets/phalcon50.php',
     ]);
 };
 ```
