@@ -319,7 +319,15 @@ Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
 - [x] `Phalcon\Text` / `Phalcon\Helper` → `Phalcon\Support\Helper\*` 静态调用迁移 ✅
 - [x] 对 v5 中已移除且无自动迁移方案的类（`Phalcon\Kernel` 等）输出提示 ✅
 - [x] 接入 `rector/extension-installer` 实现规则集自动注册 ✅
+- [x] 命名空间前缀映射：`Phalcon\Validation` 组件整体迁移时，全部子命名空间类（`Validator\Email`、`Validator\PresenceOf` 等）经 `PREFIX_MAP` 一并变更，无需逐一登记 ✅
+- [x] 引用写法保持原样：重命名只换指向，不改写法——原内联 `new \Phalcon\Loader()` 保持内联（指向 `Phalcon\Autoload\Loader`）、原 `use` 短名引用保持短名、分组 use（`use Phalcon\{Url as UrlResolver};`）同步支持；仅规则新引入的类（`HelperFactory`、`TagFactory` 等）才补 `use` 导入用短名 ✅
+- [x] 根命名空间目标类特殊处理：`Phalcon\Exception` → 全局 `\Exception`，删除 `use` 导入，代码与 docblock 引用保持全限定写法 ✅
+- [x] 冗余别名自动简化：`use Phalcon\Crypt as PhalconCrypt` → `use Phalcon\Encryption\Crypt`，代码与 docblock 中 `PhalconCrypt` 引用同步改写为短名；别名与新短名无关或短名冲突时保留 ✅
+- [x] 规则执行顺序修复：自定义规则先于 Rector 内置 `RenameClassRector` 执行，避免后者抢先替换节点丢失「内联/短名」原始写法信息 ✅
+- [x] 规则集级测试（Phalcon50Set）覆盖多规则协作场景 ✅
 - [ ] 发布到 Packagist，并尝试收录进 `rectorphp` 官方组织
+- [ ] `Phalcon\Validation\Validator\*` 方法签名变更的自动适配（如 `ValidationInterface::add()` 的 `$field` 类型放宽）
+- [ ] 方法签名变更检查：`add()`/`rule()` 参数类型放宽、异常类改为继承 `\Exception` 等接口级变更的迁移提示
 
 ## 许可
 
