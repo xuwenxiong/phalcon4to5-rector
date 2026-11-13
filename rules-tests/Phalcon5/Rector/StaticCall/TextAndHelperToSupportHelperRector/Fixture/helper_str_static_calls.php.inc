@@ -20,16 +20,18 @@ final class StrCalls
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Rector\StaticCall\TextAndHelperToSupportHelperRector\Fixture;
 
+use Phalcon\Support\HelperFactory;
+
 final class StrCalls
 {
     public function run(): void
     {
-        $vowels = (new \Phalcon\Support\HelperFactory())->countVowels('hello');
-        $decap = (new \Phalcon\Support\HelperFactory())->decapitalize('Hello');
-        $isLower = (new \Phalcon\Support\HelperFactory())->isLower('abc');
-        $isPalindrome = (new \Phalcon\Support\HelperFactory())->isPalindrome('racecar');
-        $kebab = (new \Phalcon\Support\HelperFactory())->dynamic('text_{id}_{name}', ['id' => 1]);
-        $between = (new \Phalcon\Support\HelperFactory())->firstBetween('[a][b]', '[', ']');
-        $interpolated = (new \Phalcon\Support\HelperFactory())->includes('hello world', 'wor');
+        $vowels = (new HelperFactory())->countVowels('hello');
+        $decap = (new HelperFactory())->decapitalize('Hello');
+        $isLower = (new HelperFactory())->isLower('abc');
+        $isPalindrome = (new HelperFactory())->isPalindrome('racecar');
+        $kebab = (new HelperFactory())->dynamic('text_{id}_{name}', ['id' => 1]);
+        $between = (new HelperFactory())->firstBetween('[a][b]', '[', ']');
+        $interpolated = (new HelperFactory())->includes('hello world', 'wor');
     }
 }

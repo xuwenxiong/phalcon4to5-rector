@@ -20,7 +20,7 @@ final class AliasedImports
 <?php
 
 use Phalcon\Autoload\Loader;
-use Phalcon\Encryption\Crypt as PhalconCrypt;
+use Phalcon\Encryption\Crypt;
 use Exception;
 
 final class AliasedImports
@@ -28,7 +28,7 @@ final class AliasedImports
     public function run(): void
     {
         $loader = new Loader();
-        $crypt = new PhalconCrypt();
+        $crypt = new Crypt();
         try {
             throw new Exception();
         } catch (Exception $e) {

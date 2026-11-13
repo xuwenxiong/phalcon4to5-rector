@@ -26,22 +26,24 @@ final class ArrAndOthers
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Rector\StaticCall\TextAndHelperToSupportHelperRector\Fixture;
 
+use Phalcon\Support\HelperFactory;
+
 final class ArrAndOthers
 {
     public function run(): void
     {
-        $first = (new \Phalcon\Support\HelperFactory())->first($items);
-        $firstKey = (new \Phalcon\Support\HelperFactory())->firstKey($items);
-        $last = (new \Phalcon\Support\HelperFactory())->last($items);
-        $value = (new \Phalcon\Support\HelperFactory())->get($items, 'id', 0);
-        $whitelisted = (new \Phalcon\Support\HelperFactory())->whitelist($items, ['id', 'name']);
-        $grouped = (new \Phalcon\Support\HelperFactory())->group($items, fn ($row) => $row['type']);
-        $isUnique = (new \Phalcon\Support\HelperFactory())->isUnique($items);
-        $sliced = (new \Phalcon\Support\HelperFactory())->sliceLeft($items, 2);
+        $first = (new HelperFactory())->first($items);
+        $firstKey = (new HelperFactory())->firstKey($items);
+        $last = (new HelperFactory())->last($items);
+        $value = (new HelperFactory())->get($items, 'id', 0);
+        $whitelisted = (new HelperFactory())->whitelist($items, ['id', 'name']);
+        $grouped = (new HelperFactory())->group($items, fn ($row) => $row['type']);
+        $isUnique = (new HelperFactory())->isUnique($items);
+        $sliced = (new HelperFactory())->sliceLeft($items, 2);
 
-        $json = (new \Phalcon\Support\HelperFactory())->encode($data, 0, 512);
-        $decoded = (new \Phalcon\Support\HelperFactory())->decode($json, true);
+        $json = (new HelperFactory())->encode($data, 0, 512);
+        $decoded = (new HelperFactory())->decode($json, true);
 
-        $inRange = (new \Phalcon\Support\HelperFactory())->isBetween(5, 1, 10);
+        $inRange = (new HelperFactory())->isBetween(5, 1, 10);
     }
 }

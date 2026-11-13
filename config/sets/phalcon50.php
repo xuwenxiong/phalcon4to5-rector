@@ -64,7 +64,16 @@ return static function (RectorConfig $rectorConfig): void {
         DeduplicateHelperFactoryRector::class,
     ]);
 
-    // auto-add `use` imports for the FQCNs these rules introduce
-    // (e.g. `new \Phalcon\Autoload\Loader()` -> `use Phalcon\Autoload\Loader;` + `new Loader()`)
-    $rectorConfig->importNames();
+    // ---------------------------------------------------------------------
+    // 4. `use` imports — Phalcon classes only
+    // ---------------------------------------------------------------------
+    // The rules queue the `use` imports for the Phalcon classes they introduce
+    // via PhalconImportShortener (RenameUseImportsRector for the renamed classes,
+    // TextAndHelperToSupportHelperRector for the HelperFactory, ...).
+    //
+    // importNames() stays OFF on purpose: Rector's global auto-import would
+    // shorten EVERY fully qualified reference in the code (e.g. `new \PDO()`
+    // -> `use PDO;`), not just the Phalcon ones. References of any other class
+    // keep their fully qualified name.
+    $rectorConfig->importNames(false, false);
 };

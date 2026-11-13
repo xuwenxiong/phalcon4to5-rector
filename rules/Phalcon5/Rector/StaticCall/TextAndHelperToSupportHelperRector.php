@@ -10,7 +10,7 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Name\FullyQualified;
+use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -133,6 +133,11 @@ final class TextAndHelperToSupportHelperRector extends AbstractRector
         return [StaticCall::class, ClassConstFetch::class];
     }
 
+    public function __construct(
+        private PhalconImportShortener $phalconImportShortener
+    ) {
+    }
+
     public function refactor(Node $node): ?Node
     {
         if ($node instanceof StaticCall) {
@@ -172,8 +177,15 @@ final class TextAndHelperToSupportHelperRector extends AbstractRector
         // method name (lcfirst of the helper class short name)
         $shortClassName = substr($targetClass, (int) strrpos($targetClass, '\\') + 1);
 
+        // queue the `use Phalcon\Support\HelperFactory;` import — this rule returns
+        // a MethodCall node, so RenameUseImportsRector never revisits it
+        $helperFactoryClass = $this->phalconImportShortener->shortenCreatedClass(
+            'Phalcon\Support\HelperFactory',
+            $this->getFile()
+        );
+
         return new MethodCall(
-            new New_(new FullyQualified('Phalcon\Support\HelperFactory')),
+            new New_($helperFactoryClass),
             new Identifier(lcfirst($shortClassName)),
             $node->args
         );
@@ -196,7 +208,7 @@ final class TextAndHelperToSupportHelperRector extends AbstractRector
         }
 
         return new ClassConstFetch(
-            new FullyQualified('Phalcon\Support\Helper\Str\Random'),
+            $this->phalconImportShortener->shortenCreatedClass('Phalcon\Support\Helper\Str\Random', $this->getFile()),
             new Identifier($constantName)
         );
     }

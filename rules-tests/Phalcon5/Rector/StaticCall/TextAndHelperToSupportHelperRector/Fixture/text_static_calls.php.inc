@@ -24,20 +24,23 @@ final class TextCalls
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Rector\StaticCall\TextAndHelperToSupportHelperRector\Fixture;
 
+use Phalcon\Support\HelperFactory;
+use Phalcon\Support\Helper\Str\Random;
+
 final class TextCalls
 {
     public function run(): void
     {
-        $camel = (new \Phalcon\Support\HelperFactory())->camelize('foo_bar');
-        $uncamel = (new \Phalcon\Support\HelperFactory())->uncamelize('FooBar');
-        $endsWith = (new \Phalcon\Support\HelperFactory())->endsWith('hello world', 'world');
-        $startsWith = (new \Phalcon\Support\HelperFactory())->startsWith('hello world', 'hello');
-        $random = (new \Phalcon\Support\HelperFactory())->random(\Phalcon\Support\Helper\Str\Random::RANDOM_ALNUM, 12);
-        $lower = (new \Phalcon\Support\HelperFactory())->lower('SOME TEXT');
-        $upper = (new \Phalcon\Support\HelperFactory())->upper('some text');
-        $concat = (new \Phalcon\Support\HelperFactory())->concat('/', '/var/log', 'app.log');
-        $slashed = (new \Phalcon\Support\HelperFactory())->reduceSlashes('app//models///User.php');
-        $humanized = (new \Phalcon\Support\HelperFactory())->humanize('some_field_name');
-        $type = \Phalcon\Support\Helper\Str\Random::RANDOM_ALPHA;
+        $camel = (new HelperFactory())->camelize('foo_bar');
+        $uncamel = (new HelperFactory())->uncamelize('FooBar');
+        $endsWith = (new HelperFactory())->endsWith('hello world', 'world');
+        $startsWith = (new HelperFactory())->startsWith('hello world', 'hello');
+        $random = (new HelperFactory())->random(Random::RANDOM_ALNUM, 12);
+        $lower = (new HelperFactory())->lower('SOME TEXT');
+        $upper = (new HelperFactory())->upper('some text');
+        $concat = (new HelperFactory())->concat('/', '/var/log', 'app.log');
+        $slashed = (new HelperFactory())->reduceSlashes('app//models///User.php');
+        $humanized = (new HelperFactory())->humanize('some_field_name');
+        $type = Random::RANDOM_ALPHA;
     }
 }
