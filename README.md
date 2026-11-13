@@ -276,14 +276,40 @@ throw new \Exception('boom');
 ### 目录结构
 
 ```
-├── config/sets/
-│   └── phalcon50.php                          # 规则集入口（RenameClass / RenameMethod 配置 + 自定义规则）
+├── config/
+│   └── sets/
+│       └── phalcon50.php                                  # 规则集入口（RenameClassRector / 方法重命名配置 + 自定义规则，含注册顺序说明）
 ├── rules/
-│   └── Phalcon5/Rector/New_/
-│       └── CacheAdapterFactoryConstructorInjectionRector.php
+│   └── Phalcon5/
+│       ├── PhalconClassRenames.php                        # 类名映射单一来源：MAP 精确映射 + PREFIX_MAP 命名空间前缀映射 + resolveNewClass()
+│       ├── PhalconImportShortener.php                     # 规则新引入类（TagFactory 等）补 use 导入并短名化
+│       └── Rector/
+│           ├── New_/
+│           │   ├── AssetsManagerTagFactoryInjectionRector.php     # Assets\Manager 构造器注入 Html\TagFactory
+│           │   └── CacheAdapterFactoryConstructorInjectionRector.php  # Cache 构造器注入 Storage\SerializerFactory
+│           ├── StaticCall/
+│           │   ├── TagToTagFactoryRector.php              # Phalcon\Tag 确定性子集 → $tagFactory->*
+│           │   └── TextAndHelperToSupportHelperRector.php # Text/Helper 静态调用 → Support\Helper\*
+│           └── Stmt/
+│               ├── DeduplicateHelperFactoryRector.php     # 相邻语句重复 new HelperFactory 去重
+│               ├── RemovedClassUsageHintRector.php        # 已移除类（Phalcon\Kernel 等）注入 TODO 提示
+│               └── RenameUseImportsRector.php             # use 导入改写 + 引用风格保持（内联/短名/相对/分组 use/别名简化/docblock）
 ├── rules-tests/
-│   ├── Phalcon5/Phalcon50Set/                 # 规则集整体测试
-│   └── Phalcon5/Rector/New_/.../              # 单条规则测试
+│   └── Phalcon5/
+│       ├── Phalcon50Set/                                  # 规则集整体测试（多规则协作，config/configured_rule.php 加载 phalcon50.php）
+│       │   ├── Phalcon50SetTest.php
+│       │   ├── config/configured_rule.php
+│       │   └── Fixture/*.php.inc
+│       └── Rector/                                        # 单条规则测试，目录与 rules/ 一一对应
+│           ├── New_/<RuleName>/
+│           │   ├── <RuleName>Test.php
+│           │   ├── config/configured_rule.php             # 仅启用该规则
+│           │   └── Fixture/*.php.inc                      # 输入/期望输出用例
+│           ├── StaticCall/<RuleName>/...
+│           └── Stmt/<RuleName>/...
+├── composer.json                                          # rector-extension 约定：rector/rules-auto 段声明规则集
+├── phpunit.xml
+└── README.md
 ```
 
 ### 测试约定（Rector 社区惯例）
