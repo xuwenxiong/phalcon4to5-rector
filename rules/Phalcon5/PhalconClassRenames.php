@@ -16,6 +16,8 @@ namespace Phalcon4To5\Rector\Phalcon5;
 final class PhalconClassRenames
 {
     /**
+     * Exact per-class renames.
+     *
      * @var array<string, string>
      */
     public const MAP = [
@@ -44,4 +46,40 @@ final class PhalconClassRenames
         // https://github.com/phalcon/cphalcon/issues/15800
         'Phalcon\Exception' => 'Exception',
     ];
+
+    /**
+     * Namespace-level renames: every class below the prefix moves along, e.g.
+     * `Phalcon\Validation\Validator\Email` -> `Phalcon\Filter\Validation\Validator\Email`.
+     * Exact matches in MAP always take precedence.
+     *
+     * @var array<string, string>
+     */
+    public const PREFIX_MAP = [
+        // the whole Validation component moved into the Filter namespace
+        'Phalcon\Validation' => 'Phalcon\Filter\Validation',
+    ];
+
+    /**
+     * Resolves the v5 class name for a v4 class name: exact MAP entries first,
+     * then namespace-level PREFIX_MAP entries.
+     */
+    public static function resolveNewClass(string $oldClass): ?string
+    {
+        if (isset(self::MAP[$oldClass])) {
+            return self::MAP[$oldClass];
+        }
+
+        // longest prefix wins, so `Phalcon\Validation\X` is not shadowed by
+        // a shorter, unrelated prefix
+        $prefixes = self::PREFIX_MAP;
+        uksort($prefixes, static fn (string $a, string $b): int => strlen($b) <=> strlen($a));
+
+        foreach ($prefixes as $prefix => $target) {
+            if (str_starts_with($oldClass, $prefix . '\\')) {
+                return $target . substr($oldClass, strlen($prefix));
+            }
+        }
+
+        return null;
+    }
 }

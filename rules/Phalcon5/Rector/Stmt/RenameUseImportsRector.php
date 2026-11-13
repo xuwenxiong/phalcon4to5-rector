@@ -30,7 +30,8 @@ use Rector\Rector\AbstractRector;
  * no class resolution involved, so it also works for classes removed in v5.
  *
  * Phalcon classes only: both imports and inline fully qualified references are
- * looked up in PhalconClassRenames::MAP, so classes of the application, other
+ * resolved through PhalconClassRenames::resolveNewClass() (exact MAP entries +
+ * namespace-level PREFIX_MAP entries), so classes of the application, other
  * vendors and PHP itself are never touched.
  *
  * Reference style is preserved: references written inline (e.g.
@@ -105,13 +106,14 @@ final class RenameUseImportsRector extends AbstractRector
             // against the shared prefix
             $oldName = $this->resolveUseName($use, $useUse);
 
-            // only Phalcon classes known to the upgrade map, nothing else
-            if (! isset(PhalconClassRenames::MAP[$oldName])) {
+            $newName = PhalconClassRenames::resolveNewClass($oldName);
+
+            // only renamed Phalcon classes (exact or namespace prefix),
+            // nothing else
+            if ($newName === null) {
                 $remainingUses[] = $useUse;
                 continue;
             }
-
-            $newName = PhalconClassRenames::MAP[$oldName];
 
             // root-namespace target (`Phalcon\Exception` -> `Exception`): no
             // `use` import at all — the import is dropped and the references
@@ -162,11 +164,10 @@ final class RenameUseImportsRector extends AbstractRector
         // only the renamed Phalcon classes: everything else keeps whatever
         // reference style it was written in — the format-preserving printer
         // reuses the original tokens when the resolved meaning is unchanged
-        if (! isset(PhalconClassRenames::MAP[$oldName])) {
+        $newName = PhalconClassRenames::resolveNewClass($oldName);
+        if ($newName === null) {
             return null;
         }
-
-        $newName = PhalconClassRenames::MAP[$oldName];
 
         // root-namespace target (`Phalcon\Exception` -> `Exception`): no `use`
         // import — the reference keeps the fully qualified form (`\Exception`)
@@ -234,6 +235,7 @@ final class RenameUseImportsRector extends AbstractRector
         $this->aliasPlan = $this->createAliasPlan($file->getOldStmts());
 
         $this->renameAliasesInDocComments($this->aliasPlan['aliasRenames']);
+        $this->renamePrefixNamespacesInDocComments();
 
         return $this->aliasPlan;
     }
@@ -252,11 +254,10 @@ final class RenameUseImportsRector extends AbstractRector
         foreach ($this->findClassImports($stmts, $nodeFinder) as [$use, $useUse]) {
             $oldName = $this->resolveUseName($use, $useUse);
 
-            // MAP classes with namespaced targets are rewritten by
+            // renamed classes with namespaced targets are rewritten by
             // refactorUse(); their effective short name is computed below
-            if (isset(PhalconClassRenames::MAP[$oldName])
-                && str_contains(PhalconClassRenames::MAP[$oldName], '\\')
-            ) {
+            $newClass = PhalconClassRenames::resolveNewClass($oldName);
+            if ($newClass !== null && str_contains($newClass, '\\')) {
                 if ($useUse->alias instanceof Identifier) {
                     $aliasedUses[] = [$use, $useUse];
                 }
@@ -285,11 +286,11 @@ final class RenameUseImportsRector extends AbstractRector
 
         foreach ($aliasedUses as [$use, $useUse]) {
             $oldName = $this->resolveUseName($use, $useUse);
-            if (! isset(PhalconClassRenames::MAP[$oldName])) {
+            $newClass = PhalconClassRenames::resolveNewClass($oldName);
+            if ($newClass === null) {
                 continue;
             }
 
-            $newClass = PhalconClassRenames::MAP[$oldName];
             $newShortName = $this->shortName($newClass);
             $aliasName = $useUse->alias->toString();
 
@@ -326,7 +327,7 @@ final class RenameUseImportsRector extends AbstractRector
 
         foreach ($this->findClassImports($stmts, $nodeFinder) as [$use, $useUse]) {
             $oldName = $this->resolveUseName($use, $useUse);
-            $newClass = PhalconClassRenames::MAP[$oldName] ?? null;
+            $newClass = PhalconClassRenames::resolveNewClass($oldName);
             if ($newClass === null || ! str_contains($newClass, '\\')) {
                 continue;
             }
@@ -437,6 +438,48 @@ final class RenameUseImportsRector extends AbstractRector
         }
 
         return new Name($newName);
+    }
+
+    /**
+     * Namespace-level renames (PREFIX_MAP) also apply to fully qualified
+     * class references inside docblocks — e.g.
+     * `@return Phalcon\Validation\Validator\PresenceOf` becomes
+     * `@return Phalcon\Filter\Validation\Validator\PresenceOf`.
+     *
+     * Short docblock names need no work: they resolve through the `use`
+     * imports this rule rewrites anyway.
+     */
+    private function renamePrefixNamespacesInDocComments(): void
+    {
+        if (PhalconClassRenames::PREFIX_MAP === []) {
+            return;
+        }
+
+        $nodeFinder = new NodeFinder();
+
+        $nodesWithDocComment = $nodeFinder->find(
+            $this->getFile()
+                ->getNewStmts(),
+            static fn (Node $node): bool => $node->getDocComment() instanceof Doc
+        );
+
+        foreach ($nodesWithDocComment as $node) {
+            $docComment = $node->getDocComment();
+            $oldText = $docComment->getText();
+            $newText = $oldText;
+
+            foreach (PhalconClassRenames::PREFIX_MAP as $prefix => $target) {
+                // word boundary on both sides: `Phalcon\Validation` matches
+                // `Phalcon\Validation\Validator\Email`, but not
+                // `Foo\Phalcon\ValidationX`
+                $pattern = '/(?<![\w\\\\])' . preg_quote($prefix, '/') . '(?![\w])/';
+                $newText = (string) preg_replace($pattern, $target, $newText);
+            }
+
+            if ($newText !== $oldText) {
+                $node->setDocComment(new Doc($newText));
+            }
+        }
     }
 
     private function endsWithInsensitive(string $haystack, string $needle): bool
