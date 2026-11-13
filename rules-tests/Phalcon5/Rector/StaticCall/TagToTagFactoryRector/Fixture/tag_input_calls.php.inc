@@ -25,6 +25,8 @@ final class TagInputCalls
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Rector\StaticCall\TagToTagFactoryRector\Fixture;
 
+use Phalcon\Html\Helper\Doctype;
+
 final class TagInputCalls
 {
     public function run(): void
@@ -40,6 +42,6 @@ final class TagInputCalls
         $color = $tagFactory->inputColor('theme');
         $date = $tagFactory->inputDate('start', '2026-01-01');
         $slug = $tagFactory->friendlyTitle('Some Title', '-', true);
-        $doctype = \Phalcon\Html\Helper\Doctype::HTML5;
+        $doctype = Doctype::HTML5;
     }
 }

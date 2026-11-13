@@ -221,7 +221,7 @@ use App\Support\Helpers;   // 非 Phalcon 类保持原样
 $crypt = new Crypt();      // 别名 PhalconCrypt 一并改写为短名
 ```
 
-  别名只是新短名的「前缀变体」时会连同引用一起简化（`PException` → `Exception`、`PhalconCrypt` → `Crypt`），代码与 docblock 中的引用同步改写：
+  别名只是新短名的「前缀变体」时会连同引用一起简化（`PhalconCrypt` → `Crypt`），代码与 docblock 中的引用同步改写。**根命名空间的目标类不通过 `use` 引入**：`Phalcon\Exception` 重命名到全局 `Exception` 后，原 `use` 导入直接删除，代码与 docblock 中的引用保持全限定写法（`\Exception`）：
 
 ```php
 // 迁移前
@@ -231,13 +231,11 @@ use Phalcon\Exception as PException;
 throw new PException('boom');
 
 // 迁移后
-use Exception;
-
-/** @throws Exception */
-throw new Exception('boom');
+/** @throws \Exception */
+throw new \Exception('boom');
 ```
 
-  以下情况保留别名（否则会改变语义）：别名与新短名无关（`as PEx`）；新短名已被文件内其它 `use` 导入占用（如同时有 `use App\Support\Exception;`）；文件中存在同名的 class/interface/trait/enum 声明。引用改写作用于 Rector 解析后的 FQCN（`\Phalcon\Exception`），未解析成 FQCN 的短名引用不会被误改。
+  以下情况保留别名（否则会改变语义）：别名与新短名无关（`as PEx`）；新短名已被文件内其它 `use` 导入占用（如同时有 `use App\Support\Di;`）；文件中存在同名的 class/interface/trait/enum 声明。引用改写作用于 Rector 解析后的 FQCN（`\Phalcon\Exception`），未解析成 FQCN 的短名引用不会被误改。
 
 **明确不迁移**（参数语义非确定或依赖 DI/全局状态，机械替换会产出错代码，需手动改写）：
 - `linkTo()`、`image()`、`stylesheetLink()`、`javascriptInclude()`、`select()`/`selectStatic()`、`form()`/`endForm()`、`tagHtml()`/`tagHtmlClose()`、`renderAttributes()`
@@ -248,7 +246,8 @@ throw new Exception('boom');
 
 - **`Phalcon\Tag` 仅迁移确定性子集**：输入字段方法、`friendlyText` 和 doctype 常量已自动迁移；`linkTo`、`image`、`select`、`form` 等参数语义非确定的方法需手动改写（见上方 `TagToTagFactoryRector` 的说明）。`Phalcon\Text` / `Phalcon\Helper` 静态调用已全量迁移，`Phalcon\Exception` 已自动重命名，`Phalcon\Kernel` 已自动添加 TODO 提示。
 - **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。`use` 导入重命名（`RenameUseImportsRector`）为纯配置驱动，不受此限制。
-- **`use` 导入只处理 Phalcon 类**：迁移引入的 FQCN 会自动补 `use` 导入并缩写为短名（如 `new \Phalcon\Autoload\Loader()` → `use Phalcon\Autoload\Loader;` + `new Loader()`），但仅限 `Phalcon\` 命名空间与映射表目标类。其它类的 FQCN 保持全限定写法（`new \PDO()` 不会变成 `use PDO;`）——规则集关闭了 Rector 全局的 `importNames()`，避免波及业务与第三方类。
+- **引用写法保持原样**：`RenameUseImportsRector` 只改写映射表中的 Phalcon 类，且保持原有引用风格——原来内联写的 `new \Phalcon\Loader()` 改名后仍是内联 `new \Phalcon\Autoload\Loader()`，原来通过 `use` 导入写的短名引用仍是短名。只有规则**新引入**的类（`HelperFactory`、`TagFactory`、`SerializerFactory` 等）才补 `use` 导入并使用短名。
+- **`use` 导入只处理 Phalcon 类**：其它类的 FQCN 保持全限定写法（`new \PDO()` 不会变成 `use PDO;`）——规则集关闭了 Rector 全局的 `importNames()`，避免波及业务与第三方类。根命名空间类（如全局 `Exception`）同样保持全限定，不补 `use` 导入。
 
 ## 开发
 

@@ -12,8 +12,9 @@ use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Stmt\ClassLike;
 use PhpParser\Node\Stmt\Use_;
 use PhpParser\NodeFinder;
+use PhpParser\NodeVisitor;
+use PhpParser\Token;
 use Phalcon4To5\Rector\Phalcon5\PhalconClassRenames;
-use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -30,12 +31,23 @@ use Rector\Rector\AbstractRector;
  * looked up in PhalconClassRenames::MAP, so classes of the application, other
  * vendors and PHP itself are never touched.
  *
+ * Reference style is preserved: references written inline (e.g.
+ * `new \Phalcon\Loader()`) stay fully qualified (pointing at the new class),
+ * references written through a `use` import keep their short name. Only the
+ * classes the rules introduce themselves (HelperFactory, TagFactory, ...) are
+ * turned into `use` imports + short names via PhalconImportShortener.
+ *
+ * Root-namespace targets are special: `Phalcon\Exception` becomes the global
+ * `Exception`, so the `use` import is removed entirely and the references keep
+ * their fully qualified form (`\Exception`) — a global class never gains a
+ * `use` import.
+ *
  * Redundant aliases are dropped as well: `use Phalcon\Exception as PException;`
- * becomes `use Exception;` and the `PException` references (code + docblocks)
- * follow the new class. An alias counts as redundant when it is just a prefixed
- * variant of the new short name (`PException`, `PhalconCrypt`, ...). The alias
- * is kept when it does not contain the new short name (`as PEx`), or when the
- * new short name is already taken in the file by another import or a class-like
+ * is removed and the `PException` references (code + docblocks) follow the new
+ * class. For namespaced targets an alias counts as redundant when it is just a
+ * prefixed variant of the new short name (`PhalconCrypt`, ...). The alias is
+ * kept when it does not contain the new short name (`as PEx`), or when the new
+ * short name is already taken in the file by another import or a class-like
  * declaration — rewriting the references would then change the meaning.
  *
  * @see PhalconClassRenames::MAP
@@ -43,23 +55,21 @@ use Rector\Rector\AbstractRector;
 final class RenameUseImportsRector extends AbstractRector
 {
     /**
-     * @var array{aliasRenames: array<string, string>, droppedClasses: array<string, true>}
+     * @var array{aliasRenames: array<string, string>, droppedClasses: array<string, true>, shortReferences: array<string, string|null>}
      */
-    private array $aliasPlan = ['aliasRenames' => [], 'droppedClasses' => []];
+    private array $aliasPlan = ['aliasRenames' => [], 'droppedClasses' => [], 'shortReferences' => []];
 
     private ?int $plannedFileId = null;
-
-    public function __construct(
-        private PhalconImportShortener $phalconImportShortener
-    ) {
-    }
 
     public function getNodeTypes(): array
     {
         return [Use_::class, FullyQualified::class];
     }
 
-    public function refactor(Node $node): ?Node
+    /**
+     * @return Node|Node[]|NodeVisitor::REMOVE_NODE|null
+     */
+    public function refactor(Node $node)
     {
         if ($node instanceof Use_) {
             return $this->refactorUse($node);
@@ -73,7 +83,10 @@ final class RenameUseImportsRector extends AbstractRector
         return null;
     }
 
-    private function refactorUse(Use_ $use): ?Use_
+    /**
+     * @return Use_|NodeVisitor::REMOVE_NODE|null
+     */
+    private function refactorUse(Use_ $use)
     {
         // `use function` / `use const` never import Phalcon classes
         if ($use->type !== Use_::TYPE_NORMAL) {
@@ -83,60 +96,117 @@ final class RenameUseImportsRector extends AbstractRector
         $aliasPlan = $this->getAliasPlan();
 
         $hasChanged = false;
+        $remainingUses = [];
         foreach ($use->uses as $useUse) {
             $oldName = $useUse->name->toString();
 
             // only Phalcon classes known to the upgrade map, nothing else
             if (! isset(PhalconClassRenames::MAP[$oldName])) {
+                $remainingUses[] = $useUse;
                 continue;
             }
 
             $newName = PhalconClassRenames::MAP[$oldName];
+
+            // root-namespace target (`Phalcon\Exception` -> `Exception`): no
+            // `use` import at all — the import is dropped and the references
+            // keep their fully qualified form (`\Exception`)
+            if (! str_contains($newName, '\\')) {
+                $hasChanged = true;
+                continue;
+            }
+
             $useUse->name = new Name($newName);
+            $remainingUses[] = $useUse;
             $hasChanged = true;
 
             if (! $useUse->alias instanceof Identifier) {
                 continue;
             }
 
-            $aliasName = $useUse->alias->toString();
-
             // `use Phalcon\Exception as Exception;` — the alias already is the short name
-            if ($aliasName === $this->shortName($newName)) {
+            if ($useUse->alias->toString() === $this->shortName($newName)) {
                 $useUse->alias = null;
                 continue;
             }
 
-            // `use Phalcon\Exception as PException;` — the alias is only a prefix of
+            // `use Phalcon\Crypt as PhalconCrypt;` — the alias is only a prefix of
             // the new short name, the references are rewritten by refactorClassReference()
             if (isset($aliasPlan['droppedClasses'][$oldName])) {
                 $useUse->alias = null;
             }
         }
 
-        return $hasChanged ? $use : null;
+        if (! $hasChanged) {
+            return null;
+        }
+
+        if ($remainingUses === []) {
+            return NodeVisitor::REMOVE_NODE;
+        }
+
+        $use->uses = $remainingUses;
+
+        return $use;
     }
 
     private function refactorClassReference(FullyQualified $name): ?Name
     {
         $oldName = $name->toString();
-        $hasChanged = false;
 
-        // RenameClassRector covers autoloadable renames; removed v4 classes are
-        // unresolvable by reflection, so this rule rewrites their references too
-        if (isset(PhalconClassRenames::MAP[$oldName])) {
-            $name = new FullyQualified(PhalconClassRenames::MAP[$oldName]);
-            $hasChanged = true;
+        // only the renamed Phalcon classes: everything else keeps whatever
+        // reference style it was written in — the format-preserving printer
+        // reuses the original tokens when the resolved meaning is unchanged
+        if (! isset(PhalconClassRenames::MAP[$oldName])) {
+            return null;
         }
 
-        // Phalcon classes become short names + queued `use` import, everything
-        // else (other vendors, PHP built-ins) stays fully qualified
-        $shortName = $this->phalconImportShortener->shorten($name, $this->getFile());
-        if ($shortName instanceof Name) {
-            return $shortName;
+        $newName = PhalconClassRenames::MAP[$oldName];
+
+        // root-namespace target (`Phalcon\Exception` -> `Exception`): no `use`
+        // import — the reference keeps the fully qualified form (`\Exception`)
+        if (! str_contains($newName, '\\')) {
+            return new FullyQualified($newName);
         }
 
-        return $hasChanged ? $name : null;
+        // the reference was written inline (e.g. `new \Phalcon\Loader()`): keep
+        // the inline style, just pointing at the new class name
+        if ($this->wasOriginallyInline($name)) {
+            return new FullyQualified($newName);
+        }
+
+        // the reference was written through a `use` import: keep the short
+        // name, backed by the import rewritten by refactorUse()
+        $shortReference = $this->getAliasPlan()['shortReferences'][$oldName] ?? null;
+        if ($shortReference !== null) {
+            return new Name($shortReference);
+        }
+
+        // short name taken by another import/class-like: fall back to FQCN
+        return new FullyQualified($newName);
+    }
+
+    /**
+     * The reference was written as a fully qualified name in the source code.
+     * Parsing resolves short names to FQCN nodes, but the original token
+     * position is preserved — an inline reference starts with `\`.
+     */
+    private function wasOriginallyInline(FullyQualified $name): bool
+    {
+        $startTokenPos = $name->getAttribute('startTokenPos', -1);
+        if ($startTokenPos < 0) {
+            // node created by a rule — treat like inline (keeps the FQCN)
+            return true;
+        }
+
+        $token = $this->getFile()->getOldTokens()[$startTokenPos] ?? null;
+
+        // php-parser 5: tokens are Token objects; older versions: arrays
+        if ($token instanceof Token) {
+            return $token->text === '\\';
+        }
+
+        return is_array($token) && $token[0] === T_NS_SEPARATOR;
     }
 
     /**
@@ -163,7 +233,7 @@ final class RenameUseImportsRector extends AbstractRector
 
     /**
      * @param Node[] $stmts
-     * @return array{aliasRenames: array<string, string>, droppedClasses: array<string, true>}
+     * @return array{aliasRenames: array<string, string>, droppedClasses: array<string, true>, shortReferences: array<string, string|null>}
      */
     private function createAliasPlan(array $stmts): array
     {
@@ -178,6 +248,18 @@ final class RenameUseImportsRector extends AbstractRector
             }
 
             foreach ($use->uses as $useUse) {
+                // MAP classes with namespaced targets are rewritten by
+                // refactorUse(); their effective short name is computed below
+                if (isset(PhalconClassRenames::MAP[$useUse->name->toString()])
+                    && str_contains(PhalconClassRenames::MAP[$useUse->name->toString()], '\\')
+                ) {
+                    if ($useUse->alias instanceof Identifier) {
+                        $aliasedUses[] = $useUse;
+                    }
+
+                    continue;
+                }
+
                 $takenShortNames[$useUse->alias instanceof Identifier
                     ? $useUse->alias->toString()
                     : $this->shortName($useUse->name->toString())] = true;
@@ -204,7 +286,8 @@ final class RenameUseImportsRector extends AbstractRector
                 continue;
             }
 
-            $newShortName = $this->shortName(PhalconClassRenames::MAP[$oldName]);
+            $newClass = PhalconClassRenames::MAP[$oldName];
+            $newShortName = $this->shortName($newClass);
             $aliasName = $useUse->alias->toString();
 
             // identical alias is dropped by refactorUse() on its own
@@ -217,6 +300,14 @@ final class RenameUseImportsRector extends AbstractRector
                 continue;
             }
 
+            // root-namespace target: the import is removed and the references
+            // keep their fully qualified form, so nothing can conflict — the
+            // alias is always redundant
+            if (! str_contains($newClass, '\\')) {
+                $aliasRenames[$aliasName] = '\\' . $newShortName;
+                continue;
+            }
+
             // the new short name already means something else in this file
             if (isset($takenShortNames[$newShortName]) || isset($declaredNames[$newShortName])) {
                 continue;
@@ -226,7 +317,41 @@ final class RenameUseImportsRector extends AbstractRector
             $droppedClasses[$oldName] = true;
         }
 
-        return ['aliasRenames' => $aliasRenames, 'droppedClasses' => $droppedClasses];
+        // which short name the originally-short references of each renamed
+        // class keep using after refactorUse() rewrote the import
+        $shortReferences = [];
+
+        foreach ($nodeFinder->findInstanceOf($stmts, Use_::class) as $use) {
+            if ($use->type !== Use_::TYPE_NORMAL) {
+                continue;
+            }
+
+            foreach ($use->uses as $useUse) {
+                $oldName = $useUse->name->toString();
+                $newClass = PhalconClassRenames::MAP[$oldName] ?? null;
+                if ($newClass === null || ! str_contains($newClass, '\\')) {
+                    continue;
+                }
+
+                $newShortName = $this->shortName($newClass);
+
+                if ($useUse->alias instanceof Identifier) {
+                    $shortReferences[$oldName] = isset($droppedClasses[$oldName])
+                        ? $newShortName
+                        : $useUse->alias->toString();
+
+                    continue;
+                }
+
+                // short name must not be taken by another import or a
+                // class-like declaration, otherwise it would point elsewhere
+                $shortReferences[$oldName] = isset($takenShortNames[$newShortName]) || isset($declaredNames[$newShortName])
+                    ? null
+                    : $newShortName;
+            }
+        }
+
+        return ['aliasRenames' => $aliasRenames, 'droppedClasses' => $droppedClasses, 'shortReferences' => $shortReferences];
     }
 
     /**
@@ -290,13 +415,14 @@ use Phalcon\Loader;
 use Phalcon\Exception as PException;
 
 throw new PException('boom');
+throw new \Phalcon\Loader();
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
 use Phalcon\Autoload\Loader;
-use Exception;
 
-throw new Exception('boom');
+throw new \Exception('boom');
+throw new \Phalcon\Autoload\Loader();
 CODE_SAMPLE
                 ),
             ]

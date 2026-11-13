@@ -21,7 +21,6 @@ final class AliasedImports
 
 use Phalcon\Autoload\Loader;
 use Phalcon\Encryption\Crypt;
-use Exception;
 
 final class AliasedImports
 {
@@ -30,8 +29,8 @@ final class AliasedImports
         $loader = new Loader();
         $crypt = new Crypt();
         try {
-            throw new Exception();
-        } catch (Exception $e) {
+            throw new \Exception();
+        } catch (\Exception $e) {
         }
     }
 }

@@ -15,11 +15,14 @@ final class SomeClass
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Rector\New_\AssetsManagerTagFactoryInjectionRector\Fixture;
 
+use Phalcon\Html\TagFactory;
+use Phalcon\Html\Escaper;
+
 final class SomeClass
 {
     public function run(): void
     {
-        $assets = new \Phalcon\Assets\Manager(new \Phalcon\Html\TagFactory(new \Phalcon\Html\Escaper()), ['sourceBasePath' => '/src']);
-        $assetsWithVar = new \Phalcon\Assets\Manager(new \Phalcon\Html\TagFactory(new \Phalcon\Html\Escaper()), ['targetBasePath' => '/dist', 'sourceBasePath' => '/src']);
+        $assets = new \Phalcon\Assets\Manager(new TagFactory(new Escaper()), ['sourceBasePath' => '/src']);
+        $assetsWithVar = new \Phalcon\Assets\Manager(new TagFactory(new Escaper()), ['targetBasePath' => '/dist', 'sourceBasePath' => '/src']);
     }
 }

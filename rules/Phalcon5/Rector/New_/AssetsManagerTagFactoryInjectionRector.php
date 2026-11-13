@@ -7,8 +7,8 @@ namespace Phalcon4To5\Rector\Phalcon5\Rector\New_;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\New_;
-use PhpParser\Node\Name\FullyQualified;
 use PHPStan\Type\ObjectType;
+use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -30,6 +30,11 @@ use Rector\Rector\AbstractRector;
  */
 final class AssetsManagerTagFactoryInjectionRector extends AbstractRector
 {
+    public function __construct(
+        private PhalconImportShortener $phalconImportShortener
+    ) {
+    }
+
     public function getNodeTypes(): array
     {
         return [New_::class];
@@ -65,10 +70,12 @@ final class AssetsManagerTagFactoryInjectionRector extends AbstractRector
             }
         }
 
+        $file = $this->getFile();
+
         $tagFactory = new Arg(
             new New_(
-                new FullyQualified('Phalcon\Html\TagFactory'),
-                [new Arg(new New_(new FullyQualified('Phalcon\Html\Escaper')))]
+                $this->phalconImportShortener->shortenCreatedClass('Phalcon\Html\TagFactory', $file),
+                [new Arg(new New_($this->phalconImportShortener->shortenCreatedClass('Phalcon\Html\Escaper', $file)))]
             )
         );
 
@@ -97,8 +104,8 @@ $assetsWithOptions = new Phalcon\Assets\Manager(['sourceBasePath' => '/src']);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$assets = new Phalcon\Assets\Manager(new Phalcon\Html\TagFactory(new Phalcon\Html\Escaper()));
-$assetsWithOptions = new Phalcon\Assets\Manager(new Phalcon\Html\TagFactory(new Phalcon\Html\Escaper()), ['sourceBasePath' => '/src']);
+$assets = new Phalcon\Assets\Manager(new TagFactory(new Escaper()));
+$assetsWithOptions = new Phalcon\Assets\Manager(new TagFactory(new Escaper()), ['sourceBasePath' => '/src']);
 CODE_SAMPLE
                 ),
             ]

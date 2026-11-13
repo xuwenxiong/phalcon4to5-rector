@@ -9,11 +9,11 @@ use PhpParser\Node\Expr\Assign;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\Variable;
-use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Expression;
 use PhpParser\Node\Stmt\Function_;
 use PhpParser\NodeFinder;
+use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
@@ -39,6 +39,11 @@ use Rector\Rector\AbstractRector;
  */
 final class DeduplicateHelperFactoryRector extends AbstractRector
 {
+    public function __construct(
+        private PhalconImportShortener $phalconImportShortener
+    ) {
+    }
+
     private const FACTORY_CLASS = 'Phalcon\Support\HelperFactory';
 
     private const VARIABLE_NAME = 'helperFactory';
@@ -84,7 +89,7 @@ final class DeduplicateHelperFactoryRector extends AbstractRector
 
         $assignment = new Expression(new Assign(
             new Variable(self::VARIABLE_NAME),
-            new New_(new FullyQualified(self::FACTORY_CLASS))
+            new New_($this->phalconImportShortener->shortenCreatedClass(self::FACTORY_CLASS, $this->getFile()))
         ));
 
         array_unshift($node->stmts, $assignment);
@@ -158,7 +163,7 @@ $upper = (new Phalcon\Support\HelperFactory())->upper($b);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$helperFactory = new Phalcon\Support\HelperFactory();
+$helperFactory = new HelperFactory();
 $camel = $helperFactory->camelize($a);
 $upper = $helperFactory->upper($b);
 CODE_SAMPLE

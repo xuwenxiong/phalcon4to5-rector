@@ -13,8 +13,8 @@ use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
-use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Scalar\String_;
+use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -50,6 +50,11 @@ use Rector\Rector\AbstractRector;
  */
 final class TagToTagFactoryRector extends AbstractRector
 {
+    public function __construct(
+        private PhalconImportShortener $phalconImportShortener
+    ) {
+    }
+
     /**
      * v4 Tag input methods → v5 TagFactory method names.
      * All produce (name, value, attributes) positional arguments.
@@ -173,8 +178,10 @@ final class TagToTagFactoryRector extends AbstractRector
             return null;
         }
 
+        // queue the `use Phalcon\Html\Helper\Doctype;` import: nodes created
+        // here are never revisited by RenameUseImportsRector
         return new ClassConstFetch(
-            new FullyQualified('Phalcon\Html\Helper\Doctype'),
+            $this->phalconImportShortener->shortenCreatedClass('Phalcon\Html\Helper\Doctype', $this->getFile()),
             new Identifier($constantName)
         );
     }
@@ -274,7 +281,7 @@ CODE_SAMPLE
                     <<<'CODE_SAMPLE'
 $name = $tagFactory->inputText('name', 'x', ['class' => 'c']);
 $slug = $tagFactory->friendlyTitle('Some Title', '-');
-$doctype = \Phalcon\Html\Helper\Doctype::HTML5;
+$doctype = Doctype::HTML5;
 CODE_SAMPLE
                 ),
             ]

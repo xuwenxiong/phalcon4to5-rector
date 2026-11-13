@@ -27,19 +27,17 @@ final class AliasedExceptionUsages
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Phalcon50Set\Fixture;
 
-use Exception;
-
 final class AliasedExceptionUsages
 {
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function run(): void
     {
         try {
             $this->work();
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage());
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
         }
     }
 

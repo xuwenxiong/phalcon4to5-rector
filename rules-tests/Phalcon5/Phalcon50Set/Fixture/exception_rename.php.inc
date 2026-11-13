@@ -2,8 +2,6 @@
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Phalcon50Set\Fixture;
 
-use Phalcon\Exception;
-
 final class ExceptionUsages
 {
     public function run(): void
@@ -20,17 +18,14 @@ final class ExceptionUsages
 
 namespace Phalcon4To5\Rector\Tests\Phalcon5\Phalcon50Set\Fixture;
 
-use Phalcon\Mvc\Application;
-use Exception;
-
 final class ExceptionUsages
 {
     public function run(): void
     {
         try {
-            $app = new Application();
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage());
+            $app = new \Phalcon\Mvc\Application();
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage());
         }
     }
 }

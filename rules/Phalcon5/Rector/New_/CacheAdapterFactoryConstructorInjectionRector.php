@@ -8,7 +8,7 @@ use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\ConstFetch;
 use PhpParser\Node\Expr\New_;
-use PhpParser\Node\Name\FullyQualified;
+use Phalcon4To5\Rector\Phalcon5\PhalconImportShortener;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -36,6 +36,11 @@ use Rector\Rector\AbstractRector;
  */
 final class CacheAdapterFactoryConstructorInjectionRector extends AbstractRector
 {
+    public function __construct(
+        private PhalconImportShortener $phalconImportShortener
+    ) {
+    }
+
     public function getNodeTypes(): array
     {
         return [New_::class];
@@ -56,7 +61,9 @@ final class CacheAdapterFactoryConstructorInjectionRector extends AbstractRector
 
         // case 1: no argument at all → append `new SerializerFactory()`
         if ($firstArg === null) {
-            $node->args[] = new Arg(new New_(new FullyQualified('Phalcon\Storage\SerializerFactory')));
+            $node->args[] = new Arg(
+                new New_($this->phalconImportShortener->shortenCreatedClass('Phalcon\Storage\SerializerFactory', $this->getFile()))
+            );
 
             return $node;
         }
@@ -68,7 +75,9 @@ final class CacheAdapterFactoryConstructorInjectionRector extends AbstractRector
 
         // case 2: explicit `null` first argument → replace with `new SerializerFactory()`
         if ($firstArg->value instanceof ConstFetch && $this->getName($firstArg->value->name) === 'null') {
-            $node->args[0] = new Arg(new New_(new FullyQualified('Phalcon\Storage\SerializerFactory')));
+            $node->args[0] = new Arg(
+                new New_($this->phalconImportShortener->shortenCreatedClass('Phalcon\Storage\SerializerFactory', $this->getFile()))
+            );
 
             return $node;
         }
@@ -88,8 +97,8 @@ $anotherFactory = new Phalcon\Cache\AdapterFactory(null);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$adapterFactory = new Phalcon\Cache\AdapterFactory(new Phalcon\Storage\SerializerFactory());
-$anotherFactory = new Phalcon\Cache\AdapterFactory(new Phalcon\Storage\SerializerFactory());
+$adapterFactory = new Phalcon\Cache\AdapterFactory(new SerializerFactory());
+$anotherFactory = new Phalcon\Cache\AdapterFactory(new SerializerFactory());
 CODE_SAMPLE
                 ),
             ]

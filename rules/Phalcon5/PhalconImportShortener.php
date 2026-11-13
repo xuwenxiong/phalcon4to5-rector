@@ -14,13 +14,14 @@ use Rector\ValueObject\Application\File;
  * Shortens fully qualified Phalcon class references into short names and
  * queues the `use` import — Phalcon classes only:
  *
- *  - targets of PhalconClassRenames::MAP (including the global `Exception`)
- *  - everything under the `Phalcon\` namespace (e.g. HelperFactory introduced
- *    by the custom rules)
+ *  - targets of PhalconClassRenames::MAP that live in a namespace
  *
- * References of any other class (`\PDO`, `\DateTimeImmutable`, `\App\...`) keep
- * their fully qualified name and never get a `use` import, so the migration
- * stays strictly scoped to the Phalcon framework.
+ * Root-namespace classes are never imported: the renamed target of
+ * `Phalcon\Exception` is the global `Exception`, and inline references like
+ * `\Exception` keep their fully qualified form instead of gaining a
+ * `use Exception;` import. References of any other class (`\PDO`,
+ * `\DateTimeImmutable`, `\App\...`) keep their fully qualified name too, so
+ * the migration stays strictly scoped to the Phalcon framework.
  *
  * The rules queue the imports themselves, which lets the rule set run with
  * `importNames(false)`: Rector's global auto-import would otherwise shorten
@@ -62,7 +63,14 @@ final class PhalconImportShortener
 
     private function isPhalconClass(string $className): bool
     {
-        // renamed targets, e.g. `Phalcon\Exception` -> `Exception` (global namespace)
+        // root-namespace classes (e.g. `Exception`, the renamed target of
+        // `Phalcon\Exception`) are never imported — inline `\Exception`
+        // references keep their fully qualified form
+        if (! str_contains($className, '\\')) {
+            return false;
+        }
+
+        // renamed targets, e.g. `Phalcon\Di` -> `Phalcon\Di\Di`
         if (in_array($className, PhalconClassRenames::MAP, true)) {
             return true;
         }

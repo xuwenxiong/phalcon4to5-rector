@@ -1,5 +1,7 @@
 <?php
 
+use Phalcon\Loader;
+use Phalcon\Crypt as PhalconCrypt;
 use Phalcon\Exception as PException;
 
 final class RedundantAlias
@@ -23,19 +25,20 @@ final class RedundantAlias
 -----
 <?php
 
-use Exception;
+use Phalcon\Autoload\Loader;
+use Phalcon\Encryption\Crypt;
 
 final class RedundantAlias
 {
     /**
-     * @throws Exception
+     * @throws \Exception
      */
     public function run(): void
     {
         try {
             $this->work();
-        } catch (Exception $e) {
-            throw new Exception($e->getMessage(), (int) $e->getCode(), $e);
+        } catch (\Exception $e) {
+            throw new \Exception($e->getMessage(), (int) $e->getCode(), $e);
         }
     }
 
