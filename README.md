@@ -1,6 +1,7 @@
 # Phalcon4To5Rector
 
-基于 [Rector](https://getrector.com/) 的 Phalcon Framework 4 → 5 自动升级规则集。
+phalcon框架自动升级工具（phalcon4 → phalcon5）
+基于 [Rector](https://getrector.com/) 的 Phalcon框架 4 → 5 自动升级规则集。
 
 **作者**：[xuwenxiong](https://github.com/xuwenxiong)
 
