@@ -21,15 +21,36 @@ return static function (RectorConfig $rectorConfig): void {
     // https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
     // Single source of truth: PhalconClassRenames::MAP (shared with RenameUseImportsRector)
     // ---------------------------------------------------------------------
-    $rectorConfig->ruleWithConfiguration(RenameClassRector::class, PhalconClassRenames::MAP);
-
     // NB: removed in v5, handled by custom rules below (see also TODO):
     // 'Phalcon\Text', 'Phalcon\Helper\*' -> TextAndHelperToSupportHelperRector (static calls -> Support\Helper\*)
     // 'Phalcon\Tag' (deterministic subset) -> TagToTagFactoryRector (static calls -> $tagFactory->...)
     // 'Phalcon\Kernel' -> RemovedClassUsageHintRector (TODO comment, no auto-migration possible)
 
     // ---------------------------------------------------------------------
-    // 2. Method renames
+    // 2. Custom rules — MUST be registered before RenameClassRector
+    // ---------------------------------------------------------------------
+    // Rules run in registration order. RenameUseImportsRector has to see the
+    // class references first: RenameClassRector replaces every renamed node
+    // with a brand-new FullyQualified node without token positions, which
+    // destroys the information whether the reference was written inline or
+    // through a `use` import. Running the custom rules first keeps the
+    // reference style (inline stays inline, short names stay short).
+    // RenameClassRector still handles the remaining duties afterwards: PHPDoc
+    // types, extends/implements and class-like declarations.
+    $rectorConfig->rules([
+        CacheAdapterFactoryConstructorInjectionRector::class,
+        AssetsManagerTagFactoryInjectionRector::class,
+        TextAndHelperToSupportHelperRector::class,
+        TagToTagFactoryRector::class,
+        RemovedClassUsageHintRector::class,
+        RenameUseImportsRector::class,
+        DeduplicateHelperFactoryRector::class,
+    ]);
+
+    $rectorConfig->ruleWithConfiguration(RenameClassRector::class, PhalconClassRenames::MAP);
+
+    // ---------------------------------------------------------------------
+    // 3. Method renames
     // ---------------------------------------------------------------------
     $rectorConfig->ruleWithConfiguration(RenameMethodRector::class, [
         // Phalcon\Autoload\Loader: register*() -> set*()
@@ -49,19 +70,6 @@ return static function (RectorConfig $rectorConfig): void {
         new MethodCallRename('Phalcon\Assets\Collection', 'setLocal', 'setIsLocal'),
         new MethodCallRename('Phalcon\Assets\Collection', 'getTargetLocal', 'getTargetIsLocal'),
         new MethodCallRename('Phalcon\Assets\Collection', 'setTargetLocal', 'setTargetIsLocal'),
-    ]);
-
-    // ---------------------------------------------------------------------
-    // 3. Custom rules
-    // ---------------------------------------------------------------------
-    $rectorConfig->rules([
-        CacheAdapterFactoryConstructorInjectionRector::class,
-        AssetsManagerTagFactoryInjectionRector::class,
-        TextAndHelperToSupportHelperRector::class,
-        TagToTagFactoryRector::class,
-        RemovedClassUsageHintRector::class,
-        RenameUseImportsRector::class,
-        DeduplicateHelperFactoryRector::class,
     ]);
 
     // ---------------------------------------------------------------------
