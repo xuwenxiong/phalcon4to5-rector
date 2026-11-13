@@ -188,8 +188,44 @@ final class RenameUseImportsRector extends AbstractRector
             return new Name($shortReference);
         }
 
+        // relative sub-namespace reference (`StringLength\Max` below an
+        // imported `Phalcon\Validation\Validator\StringLength`): keep the
+        // relative style, backed by the namespace import rewritten by
+        // refactorUse()
+        $relativeReference = $this->resolveRelativeReference($oldName);
+        if ($relativeReference !== null) {
+            return new Name($relativeReference);
+        }
+
         // short name taken by another import/class-like: fall back to FQCN
         return new FullyQualified($newName);
+    }
+
+    /**
+     * A class reference written as a relative path under an imported
+     * namespace — e.g. `StringLength\Max` when
+     * `Phalcon\Validation\Validator\StringLength` is imported. The longest
+     * matching import wins, so a `Phalcon\Validation\Validator` import is
+     * preferred over `Phalcon\Validation`.
+     */
+    private function resolveRelativeReference(string $oldName): ?string
+    {
+        $bestReference = null;
+        $bestImportLength = 0;
+
+        foreach ($this->getAliasPlan()['shortReferences'] as $importName => $shortReference) {
+            if ($shortReference === null) {
+                continue;
+            }
+
+            $prefix = $importName . '\\';
+            if (str_starts_with($oldName, $prefix) && strlen($importName) > $bestImportLength) {
+                $bestImportLength = strlen($importName);
+                $bestReference = $shortReference . substr($oldName, strlen($importName));
+            }
+        }
+
+        return $bestReference;
     }
 
     /**
