@@ -10,7 +10,9 @@ use PhpParser\Node\Identifier;
 use PhpParser\Node\Name;
 use PhpParser\Node\Name\FullyQualified;
 use PhpParser\Node\Stmt\ClassLike;
+use PhpParser\Node\Stmt\GroupUse;
 use PhpParser\Node\Stmt\Use_;
+use PhpParser\Node\Stmt\UseUse;
 use PhpParser\NodeFinder;
 use PhpParser\NodeVisitor;
 use PhpParser\Token;
@@ -59,11 +61,11 @@ final class RenameUseImportsRector extends AbstractRector
      */
     private array $aliasPlan = ['aliasRenames' => [], 'droppedClasses' => [], 'shortReferences' => []];
 
-    private ?int $plannedFileId = null;
+    private ?string $plannedFilePath = null;
 
     public function getNodeTypes(): array
     {
-        return [Use_::class, FullyQualified::class];
+        return [Use_::class, GroupUse::class, FullyQualified::class];
     }
 
     /**
@@ -71,7 +73,7 @@ final class RenameUseImportsRector extends AbstractRector
      */
     public function refactor(Node $node)
     {
-        if ($node instanceof Use_) {
+        if ($node instanceof Use_ || $node instanceof GroupUse) {
             return $this->refactorUse($node);
         }
 
@@ -84,12 +86,13 @@ final class RenameUseImportsRector extends AbstractRector
     }
 
     /**
-     * @return Use_|NodeVisitor::REMOVE_NODE|null
+     * @return Use_|GroupUse|NodeVisitor::REMOVE_NODE|null
      */
-    private function refactorUse(Use_ $use)
+    private function refactorUse(Use_|GroupUse $use)
     {
         // `use function` / `use const` never import Phalcon classes
-        if ($use->type !== Use_::TYPE_NORMAL) {
+        // (GroupUse of `use Phalcon\{...};` has TYPE_UNKNOWN, not TYPE_NORMAL)
+        if ($use->type === Use_::TYPE_FUNCTION || $use->type === Use_::TYPE_CONSTANT) {
             return null;
         }
 
@@ -98,7 +101,9 @@ final class RenameUseImportsRector extends AbstractRector
         $hasChanged = false;
         $remainingUses = [];
         foreach ($use->uses as $useUse) {
-            $oldName = $useUse->name->toString();
+            // grouped imports (`use Phalcon\{Url as UrlResolver};`) resolve
+            // against the shared prefix
+            $oldName = $this->resolveUseName($use, $useUse);
 
             // only Phalcon classes known to the upgrade map, nothing else
             if (! isset(PhalconClassRenames::MAP[$oldName])) {
@@ -116,7 +121,7 @@ final class RenameUseImportsRector extends AbstractRector
                 continue;
             }
 
-            $useUse->name = new Name($newName);
+            $useUse->name = $this->rewriteUseItemName($use, $newName);
             $remainingUses[] = $useUse;
             $hasChanged = true;
 
@@ -215,13 +220,15 @@ final class RenameUseImportsRector extends AbstractRector
     private function getAliasPlan(): array
     {
         $file = $this->getFile();
-        $fileId = spl_object_id($file);
+        $filePath = $file->getFilePath();
 
-        if ($this->plannedFileId === $fileId) {
+        // spl_object_id() would be reused by the GC for later files, so the
+        // file path is the only reliable cache key across a multi-file run
+        if ($this->plannedFilePath === $filePath) {
             return $this->aliasPlan;
         }
 
-        $this->plannedFileId = $fileId;
+        $this->plannedFilePath = $filePath;
         // the original stmts are used on purpose: imports are already rewritten by the
         // time later nodes are visited, while the alias information is still needed
         $this->aliasPlan = $this->createAliasPlan($file->getOldStmts());
@@ -242,31 +249,27 @@ final class RenameUseImportsRector extends AbstractRector
         $takenShortNames = [];
         $aliasedUses = [];
 
-        foreach ($nodeFinder->findInstanceOf($stmts, Use_::class) as $use) {
-            if ($use->type !== Use_::TYPE_NORMAL) {
+        foreach ($this->findClassImports($stmts, $nodeFinder) as [$use, $useUse]) {
+            $oldName = $this->resolveUseName($use, $useUse);
+
+            // MAP classes with namespaced targets are rewritten by
+            // refactorUse(); their effective short name is computed below
+            if (isset(PhalconClassRenames::MAP[$oldName])
+                && str_contains(PhalconClassRenames::MAP[$oldName], '\\')
+            ) {
+                if ($useUse->alias instanceof Identifier) {
+                    $aliasedUses[] = [$use, $useUse];
+                }
+
                 continue;
             }
 
-            foreach ($use->uses as $useUse) {
-                // MAP classes with namespaced targets are rewritten by
-                // refactorUse(); their effective short name is computed below
-                if (isset(PhalconClassRenames::MAP[$useUse->name->toString()])
-                    && str_contains(PhalconClassRenames::MAP[$useUse->name->toString()], '\\')
-                ) {
-                    if ($useUse->alias instanceof Identifier) {
-                        $aliasedUses[] = $useUse;
-                    }
+            $takenShortNames[$useUse->alias instanceof Identifier
+                ? $useUse->alias->toString()
+                : $this->shortName($oldName)] = true;
 
-                    continue;
-                }
-
-                $takenShortNames[$useUse->alias instanceof Identifier
-                    ? $useUse->alias->toString()
-                    : $this->shortName($useUse->name->toString())] = true;
-
-                if ($useUse->alias instanceof Identifier) {
-                    $aliasedUses[] = $useUse;
-                }
+            if ($useUse->alias instanceof Identifier) {
+                $aliasedUses[] = [$use, $useUse];
             }
         }
 
@@ -280,8 +283,8 @@ final class RenameUseImportsRector extends AbstractRector
         $aliasRenames = [];
         $droppedClasses = [];
 
-        foreach ($aliasedUses as $useUse) {
-            $oldName = $useUse->name->toString();
+        foreach ($aliasedUses as [$use, $useUse]) {
+            $oldName = $this->resolveUseName($use, $useUse);
             if (! isset(PhalconClassRenames::MAP[$oldName])) {
                 continue;
             }
@@ -321,37 +324,54 @@ final class RenameUseImportsRector extends AbstractRector
         // class keep using after refactorUse() rewrote the import
         $shortReferences = [];
 
-        foreach ($nodeFinder->findInstanceOf($stmts, Use_::class) as $use) {
-            if ($use->type !== Use_::TYPE_NORMAL) {
+        foreach ($this->findClassImports($stmts, $nodeFinder) as [$use, $useUse]) {
+            $oldName = $this->resolveUseName($use, $useUse);
+            $newClass = PhalconClassRenames::MAP[$oldName] ?? null;
+            if ($newClass === null || ! str_contains($newClass, '\\')) {
+                continue;
+            }
+
+            $newShortName = $this->shortName($newClass);
+
+            if ($useUse->alias instanceof Identifier) {
+                $shortReferences[$oldName] = isset($droppedClasses[$oldName])
+                    ? $newShortName
+                    : $useUse->alias->toString();
+
+                continue;
+            }
+
+            // short name must not be taken by another import or a
+            // class-like declaration, otherwise it would point elsewhere
+            $shortReferences[$oldName] = isset($takenShortNames[$newShortName]) || isset($declaredNames[$newShortName])
+                ? null
+                : $newShortName;
+        }
+
+        return ['aliasRenames' => $aliasRenames, 'droppedClasses' => $droppedClasses, 'shortReferences' => $shortReferences];
+    }
+
+    /**
+     * @return array<array{Use_|GroupUse, UseUse}>
+     */
+    private function findClassImports(array $stmts, NodeFinder $nodeFinder): array
+    {
+        $pairs = [];
+
+        foreach ($nodeFinder->find(
+            $stmts,
+            static fn (Node $node): bool => $node instanceof Use_ || $node instanceof GroupUse
+        ) as $use) {
+            if ($use->type === Use_::TYPE_FUNCTION || $use->type === Use_::TYPE_CONSTANT) {
                 continue;
             }
 
             foreach ($use->uses as $useUse) {
-                $oldName = $useUse->name->toString();
-                $newClass = PhalconClassRenames::MAP[$oldName] ?? null;
-                if ($newClass === null || ! str_contains($newClass, '\\')) {
-                    continue;
-                }
-
-                $newShortName = $this->shortName($newClass);
-
-                if ($useUse->alias instanceof Identifier) {
-                    $shortReferences[$oldName] = isset($droppedClasses[$oldName])
-                        ? $newShortName
-                        : $useUse->alias->toString();
-
-                    continue;
-                }
-
-                // short name must not be taken by another import or a
-                // class-like declaration, otherwise it would point elsewhere
-                $shortReferences[$oldName] = isset($takenShortNames[$newShortName]) || isset($declaredNames[$newShortName])
-                    ? null
-                    : $newShortName;
+                $pairs[] = [$use, $useUse];
             }
         }
 
-        return ['aliasRenames' => $aliasRenames, 'droppedClasses' => $droppedClasses, 'shortReferences' => $shortReferences];
+        return $pairs;
     }
 
     /**
@@ -388,6 +408,35 @@ final class RenameUseImportsRector extends AbstractRector
                 $node->setDocComment(new Doc($newText));
             }
         }
+    }
+
+    /**
+     * FQCN a `use` item imports — grouped imports (`GroupUse`) resolve
+     * against the shared prefix: `use Phalcon\{Url};` imports `Phalcon\Url`
+     */
+    private function resolveUseName(Use_|GroupUse $use, UseUse $useUse): string
+    {
+        if ($use instanceof GroupUse && $use->prefix->toString() !== '') {
+            return $use->prefix->toString() . '\\' . $useUse->name->toString();
+        }
+
+        return $useUse->name->toString();
+    }
+
+    /**
+     * Grouped imports keep relative item names: `Phalcon\Mvc\Url` inside
+     * the `Phalcon` prefix group is stored as `Mvc\Url`
+     */
+    private function rewriteUseItemName(Use_|GroupUse $use, string $newName): Name
+    {
+        if ($use instanceof GroupUse) {
+            $prefix = $use->prefix->toString() . '\\';
+            if (str_starts_with($newName, $prefix)) {
+                return new Name(substr($newName, strlen($prefix)));
+            }
+        }
+
+        return new Name($newName);
     }
 
     private function endsWithInsensitive(string $haystack, string $needle): bool
