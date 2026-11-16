@@ -206,6 +206,34 @@ use Phalcon\Kernel;
 
 > 注：提示清单刻意保持精简——有迁移方案的类都由对应规则处理（重命名、TagFactory、Support\Helper 等），避免与其他规则产生冲突注释。`Phalcon\Exception` 属于"有迁移方案"（替换为 `\Exception`），由 `RenameClassRector` 处理，不在此列。
 
+- `DiBeforeServiceResolveListenerReturnRector` — `di:beforeServiceResolve` 监听器不能再返回值。v4 中 `Di::get()` 只认「对象」返回值（`typeof instance != "object"` 时忽略，继续正常解析），所以监听器以 `return true;`/`return false;` 结尾毫无副作用；Phalcon 5 收紧为「非 `null` 即短路」——返回值会被直接当作服务实例，`$di->getShared()` 于是返回 `true`/`false` 并写入共享缓存。本规则剥离监听器中的标量/数组返回值（`true`/`false`/数字/字符串/`[]`），并移除因此不再匹配的返回类型声明；**对象返回值保留**（这是 v4 就有的「自建实例」短路机制）：
+
+```php
+// v4：所有分支以 return true; 结束，行为正常
+public function beforeServiceResolve(EventInterface $event, Di $di, array $data): bool
+{
+    if ($data['name'] === 'logger') {
+        return true;
+    }
+
+    return true;
+}
+
+// 迁移后：返回值剥离 + 失效的 : bool 声明移除（隐式返回 null 即“不干预”）
+public function beforeServiceResolve(EventInterface $event, Di $di, array $data)
+{
+    if ($data['name'] === 'logger') {
+        return;
+    }
+
+    return;
+}
+```
+
+覆盖两种监听器形态：`$eventsManager->attach('di:beforeServiceResolve', function (...) {...})` 内联闭包（含箭头函数 `fn (...) => true` → 空闭包），以及监听器类中名为 `beforeServiceResolve()` 的 public 方法（Phalcon 按事件名调用监听器方法）。未自动处理、需人工复核：间接引用监听器（`[$this, 'onBeforeResolve']`、可调用字符串、闭包存变量）、挂在 `di` 命名空间下用 `$event->getType()` 分流的监听器、返回值类型未知的表达式（`return $this->handle();`）。
+
+> 注：5.0–5.12 仍是「非对象返回被忽略」的旧判定，5.13 起收紧为严格 `=== null`。因此本规则对所有 v5 目标都安全——在旧 5.x 上是无害的写法统一，在新 5.x 上是必需的修复。
+
 - `RenameUseImportsRector` — 改写类重命名后残留的 `use` 导入语句（Rector 2.x 的 `RenameClassRector` 只重命名内联引用，旧导入会留在文件顶部）。与 `RenameClassRector` 共享同一份映射数据（`PhalconClassRenames::MAP` 精确类名映射 + `PhalconClassRenames::PREFIX_MAP` 命名空间前缀映射，经 `PhalconClassRenames::resolveNewClass()` 解析），纯配置驱动、不依赖类反射。**只处理映射范围内的 Phalcon 类**，业务类、第三方库、PHP 内置类的 `use` 一律不动。前缀映射覆盖整个命名空间——v5 中 `Phalcon\Validation` 组件整体迁入 `Phalcon\Filter\Validation`，其全部子命名空间类（`Validator\Email`、`Validator\PresenceOf`、`Validator\Regex`、`Validator\StringLength` 等）随之变更：
 
 ```php
@@ -293,6 +321,7 @@ throw new \Exception('boom');
 │           │   └── TextAndHelperToSupportHelperRector.php # Text/Helper 静态调用 → Support\Helper\*
 │           └── Stmt/
 │               ├── DeduplicateHelperFactoryRector.php     # 相邻语句重复 new HelperFactory 去重
+│               ├── DiBeforeServiceResolveListenerReturnRector.php  # di:beforeServiceResolve 监听器剥离返回值
 │               ├── RemovedClassUsageHintRector.php        # 已移除类（Phalcon\Kernel 等）注入 TODO 提示
 │               └── RenameUseImportsRector.php             # use 导入改写 + 引用风格保持（内联/短名/相对/分组 use/别名简化/docblock）
 ├── rules-tests/
@@ -353,6 +382,7 @@ Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
 - [x] 冗余别名自动简化：`use Phalcon\Crypt as PhalconCrypt` → `use Phalcon\Encryption\Crypt`，代码与 docblock 中 `PhalconCrypt` 引用同步改写为短名；别名与新短名无关或短名冲突时保留 ✅
 - [x] 规则执行顺序修复：自定义规则先于 Rector 内置 `RenameClassRector` 执行，避免后者抢先替换节点丢失「内联/短名」原始写法信息 ✅
 - [x] 规则集级测试（Phalcon50Set）覆盖多规则协作场景 ✅
+- [x] `di:beforeServiceResolve` 监听器返回值迁移：剥离 `return true;` 等标量/数组返回值（Phalcon 5 中非 `null` 返回值会短路服务解析，使 `getShared()` 返回 `true`/`false`），保留对象返回值，并移除失效的返回类型声明 ✅
 - [ ] 发布到 Packagist，并尝试收录进 `rectorphp` 官方组织
 - [ ] `Phalcon\Validation\Validator\*` 方法签名变更的自动适配（如 `ValidationInterface::add()` 的 `$field` 类型放宽）
 - [ ] 方法签名变更检查：`add()`/`rule()` 参数类型放宽、异常类改为继承 `\Exception` 等接口级变更的迁移提示

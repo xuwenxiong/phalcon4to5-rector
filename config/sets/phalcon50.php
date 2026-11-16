@@ -8,6 +8,7 @@ use Phalcon4To5\Rector\Phalcon5\Rector\New_\CacheAdapterFactoryConstructorInject
 use Phalcon4To5\Rector\Phalcon5\Rector\StaticCall\TagToTagFactoryRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\StaticCall\TextAndHelperToSupportHelperRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\DeduplicateHelperFactoryRector;
+use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\DiBeforeServiceResolveListenerReturnRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\RemovedClassUsageHintRector;
 use Phalcon4To5\Rector\Phalcon5\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
@@ -45,6 +46,7 @@ return static function (RectorConfig $rectorConfig): void {
         RemovedClassUsageHintRector::class,
         RenameUseImportsRector::class,
         DeduplicateHelperFactoryRector::class,
+        DiBeforeServiceResolveListenerReturnRector::class,
     ]);
 
     $rectorConfig->ruleWithConfiguration(RenameClassRector::class, PhalconClassRenames::MAP);
