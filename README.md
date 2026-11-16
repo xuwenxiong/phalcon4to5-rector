@@ -1,7 +1,9 @@
-# Phalcon4To5Rector
+# rector-phalcon
 
 phalcon框架自动升级工具（phalcon4 → phalcon5）
 基于 [Rector](https://getrector.com/) 的 Phalcon框架 4 → 5 自动升级规则集。
+
+**仓库**：[github.com/xuwenxiong/rector-phalcon](https://github.com/xuwenxiong/rector-phalcon)
 
 **作者**：[xuwenxiong](https://github.com/xuwenxiong)
 
@@ -20,7 +22,7 @@ Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-
 ## 安装
 
 ```bash
-composer require --dev xuwenxiong/phalcon4to5-rector
+composer require --dev xuwenxiong/rector-phalcon
 ```
 
 ## 使用
@@ -52,7 +54,7 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     $rectorConfig->sets([
-        __DIR__ . '/vendor/xuwenxiong/phalcon4to5-rector/config/sets/phalcon50.php',
+        __DIR__ . '/vendor/xuwenxiong/rector-phalcon/config/sets/phalcon50.php',
     ]);
 };
 ```
@@ -365,7 +367,7 @@ vendor/bin/phpunit --colors=never
 本项目用 **PHP 8.4** 开发与测试（PHP 8.4 已验证 20 个测试全绿；包要求 PHP 8.1+，见 `composer.json`）。
 
 ```powershell
-Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
+Set-Location "d:\opt\htdocs\rector-phalcon"
 
 # 运行测试
 & "D:\software\php\php8.4.27\php.exe" "vendor\phpunit\phpunit\phpunit" --colors=never
