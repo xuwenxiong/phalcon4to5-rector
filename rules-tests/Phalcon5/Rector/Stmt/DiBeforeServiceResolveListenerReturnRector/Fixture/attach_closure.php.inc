@@ -41,14 +41,17 @@ $eventsManager->attach('di:beforeServiceResolve', function (EventInterface $even
     }
 
     if ($data['name'] === 'logger') {
+        // Phalcon5（v5.13+）中有返回值会中断 Di 解析
         return;
     }
 
     if ($data['name'] === 'router') {
+        // Phalcon5（v5.13+）中有返回值会中断 Di 解析
         return;
     }
 
     if ($data['name'] === 'view') {
+        // Phalcon5（v5.13+）中有返回值会中断 Di 解析
         return;
     }
 

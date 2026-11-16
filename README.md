@@ -223,12 +223,16 @@ public function beforeServiceResolve(EventInterface $event, Di $di, array $data)
 public function beforeServiceResolve(EventInterface $event, Di $di, array $data)
 {
     if ($data['name'] === 'logger') {
+        // Phalcon5（v5.13+）中有返回值会中断 Di 解析
         return;
     }
 
+    // Phalcon5（v5.13+）中有返回值会中断 Di 解析
     return;
 }
 ```
+
+每处被剥离的 `return;` 上方都会带一行原因注释（`Phalcon5（v5.13+）中有返回值会中断 Di 解析`），避免后来者把监听器又读成「布尔开关」而补回返回值；注释带标记、重复运行不会叠加。
 
 覆盖两种监听器形态：`$eventsManager->attach('di:beforeServiceResolve', function (...) {...})` 内联闭包（含箭头函数 `fn (...) => true` → 空闭包），以及监听器类中名为 `beforeServiceResolve()` 的 public 方法（Phalcon 按事件名调用监听器方法）。未自动处理、需人工复核：间接引用监听器（`[$this, 'onBeforeResolve']`、可调用字符串、闭包存变量）、挂在 `di` 命名空间下用 `$event->getType()` 分流的监听器、返回值类型未知的表达式（`return $this->handle();`）。
 
@@ -382,7 +386,7 @@ Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
 - [x] 冗余别名自动简化：`use Phalcon\Crypt as PhalconCrypt` → `use Phalcon\Encryption\Crypt`，代码与 docblock 中 `PhalconCrypt` 引用同步改写为短名；别名与新短名无关或短名冲突时保留 ✅
 - [x] 规则执行顺序修复：自定义规则先于 Rector 内置 `RenameClassRector` 执行，避免后者抢先替换节点丢失「内联/短名」原始写法信息 ✅
 - [x] 规则集级测试（Phalcon50Set）覆盖多规则协作场景 ✅
-- [x] `di:beforeServiceResolve` 监听器返回值迁移：剥离 `return true;` 等标量/数组返回值（Phalcon 5 中非 `null` 返回值会短路服务解析，使 `getShared()` 返回 `true`/`false`），保留对象返回值，并移除失效的返回类型声明 ✅
+- [x] `di:beforeServiceResolve` 监听器返回值迁移：剥离 `return true;` 等标量/数组返回值（Phalcon 5 中非 `null` 返回值会短路服务解析，使 `getShared()` 返回 `true`/`false`），保留对象返回值，移除失效的返回类型声明，并在每处 `return;` 上方写入原因注释（带标记、幂等） ✅
 - [ ] 发布到 Packagist，并尝试收录进 `rectorphp` 官方组织
 - [ ] `Phalcon\Validation\Validator\*` 方法签名变更的自动适配（如 `ValidationInterface::add()` 的 `$field` 类型放宽）
 - [ ] 方法签名变更检查：`add()`/`rule()` 参数类型放宽、异常类改为继承 `\Exception` 等接口级变更的迁移提示

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Phalcon4To5\Rector\Phalcon5\Rector\Stmt;
 
+use PhpParser\Comment;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
@@ -20,6 +21,7 @@ use PhpParser\Node\Stmt\ClassMethod;
 use PhpParser\Node\Stmt\Return_;
 use PhpParser\Node\UnionType;
 use PhpParser\NodeVisitor;
+use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
 use Rector\Rector\AbstractRector;
@@ -64,6 +66,13 @@ final class DiBeforeServiceResolveListenerReturnRector extends AbstractRector
 
     private const LISTENER_METHOD_NAME = 'beforeserviceresolve';
 
+    /**
+     * Also the idempotency marker: a second run never doubles the comment.
+     */
+    private const REASON_MARKER = 'Phalcon5';
+
+    private const REASON_COMMENT = '// Phalcon5（v5.13+）中有返回值会中断 Di 解析';
+
     public function getNodeTypes(): array
     {
         return [MethodCall::class, ClassMethod::class];
@@ -97,9 +106,11 @@ CODE_SAMPLE
                     <<<'CODE_SAMPLE'
 $eventsManager->attach('di:beforeServiceResolve', function (EventInterface $event, Di $di, array $data) {
     if ($data['name'] === 'config') {
+        // Phalcon5（v5.13+）中有返回值会中断 Di 解析
         return;
     }
 
+    // Phalcon5（v5.13+）中有返回值会中断 Di 解析
     return;
 });
 CODE_SAMPLE
@@ -260,6 +271,7 @@ CODE_SAMPLE
                 return null;
             }
 
+            $this->addReasonComment($node);
             $node->expr = null;
             $hasChanged = true;
 
@@ -267,6 +279,24 @@ CODE_SAMPLE
         });
 
         return $hasChanged;
+    }
+
+    /**
+     * Explains the rewrite in place, so the stripped value is not "restored"
+     * later by someone reading the listener as a boolean chain.
+     */
+    private function addReasonComment(Return_ $return): void
+    {
+        foreach ($return->getComments() as $existingComment) {
+            if (str_contains($existingComment->getText(), self::REASON_MARKER)) {
+                return;
+            }
+        }
+
+        $comments = $return->getComments();
+        $comments[] = new Comment(self::REASON_COMMENT);
+
+        $return->setAttribute(AttributeKey::COMMENTS, $comments);
     }
 
     /**
