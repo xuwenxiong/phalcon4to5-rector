@@ -46,7 +46,7 @@ use Rector\Rector\AbstractRector;
  *    setAutoescape(), setDocType/getDocType()
  *  - DI accessors: setDI/getDI/getEscaper()/getEscaperService()/getUrlService()
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class TagToTagFactoryRector extends AbstractRector
 {

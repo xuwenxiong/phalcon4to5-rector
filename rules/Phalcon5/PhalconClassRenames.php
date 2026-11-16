@@ -11,7 +11,7 @@ namespace Phalcon4To5\Rector\Phalcon5;
  * - RenameClassRector (inline class references)   — see config/sets/phalcon50.php
  * - RenameUseImportsRector (`use` import statements)
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class PhalconClassRenames
 {

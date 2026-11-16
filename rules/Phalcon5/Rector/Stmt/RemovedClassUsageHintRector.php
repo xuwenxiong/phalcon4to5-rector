@@ -24,7 +24,7 @@ use Rector\Rector\AbstractRector;
  * The list is intentionally small: classes that DO have a migration are
  * handled by dedicated rules instead (renames, TagFactory, Support\Helper ...).
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class RemovedClassUsageHintRector extends AbstractRector
 {

@@ -37,7 +37,7 @@ use Rector\Rector\AbstractRector;
  * Unmapped calls (e.g. `Phalcon\Helper\File`, which never existed in v4) are
  * left untouched.
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class TextAndHelperToSupportHelperRector extends AbstractRector
 {

@@ -5,7 +5,7 @@ phalcon框架自动升级工具（phalcon4 → phalcon5）
 
 **作者**：[xuwenxiong](https://github.com/xuwenxiong)
 
-Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，实现 Phalcon 5 [官方升级指南](https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md) 中的破坏性变更，让应用代码升级尽可能自动化。
+Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，实现 Phalcon 5 [官方升级指南](https://docs.phalcon.io/5.23/upgrade) 中的破坏性变更，让应用代码升级尽可能自动化。
 
 > ⚠️ **开发测试阶段**：本项目目前处于开发测试阶段，规则覆盖度和行为仍在迭代验证中，**暂不能用于生产**。使用前请务必先 `--dry-run` 预览全部变更并人工审查，再应用到代码。
 

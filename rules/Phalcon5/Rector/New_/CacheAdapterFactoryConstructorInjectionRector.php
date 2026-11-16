@@ -32,7 +32,7 @@ use Rector\Rector\AbstractRector;
  * Any other first argument (an existing SerializerFactory, a variable, etc.)
  * is left untouched.
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class CacheAdapterFactoryConstructorInjectionRector extends AbstractRector
 {

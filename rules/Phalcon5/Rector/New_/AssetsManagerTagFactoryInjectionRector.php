@@ -26,7 +26,7 @@ use Rector\Rector\AbstractRector;
  *  - first arg is options    → prepend `new TagFactory(new Escaper())` before it
  *  - first arg is TagFactory → skip
  *
- * @see https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+ * @see https://docs.phalcon.io/5.23/upgrade
  */
 final class AssetsManagerTagFactoryInjectionRector extends AbstractRector
 {

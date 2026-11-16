@@ -19,7 +19,7 @@ use Rector\Renaming\ValueObject\MethodCallRename;
 return static function (RectorConfig $rectorConfig): void {
     // ---------------------------------------------------------------------
     // 1. Namespace / class renames (biggest breaking change of Phalcon 5)
-    // https://github.com/phalcon/orphanage-docs/blob/main/en/upgrade.md
+    // https://docs.phalcon.io/5.23/upgrade
     // Single source of truth: PhalconClassRenames::MAP (shared with RenameUseImportsRector)
     // ---------------------------------------------------------------------
     // NB: removed in v5, handled by custom rules below (see also TODO):
