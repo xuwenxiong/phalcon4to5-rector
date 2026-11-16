@@ -9,6 +9,8 @@ Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-
 
 > ⚠️ **开发测试阶段**：本项目目前处于开发测试阶段，规则覆盖度和行为仍在迭代验证中，**暂不能用于生产**。使用前请务必先 `--dry-run` 预览全部变更并人工审查，再应用到代码。
 
+> 📌 **实测场景**：本项目的规则行为已在真实项目上验证——**Phalcon 4.0.2 → Phalcon 5.23.0** 的完整升级流程。规则判定逻辑以 cphalcon 源码为准（v4.1 / v5.0 / v5.13 / v5.16 逐版本核对），其中 `di:beforeServiceResolve` 监听器返回值的行为差异自 v5.13 起收紧为严格 `null` 判定。
+
 ## 功能
 
 - 一键重命名迁移到新命名空间的类（`Phalcon\Loader` → `Phalcon\Autoload\Loader` 等）
@@ -386,6 +388,7 @@ Set-Location "d:\opt\htdocs\Phalcon4To5Rector"
 - [x] 冗余别名自动简化：`use Phalcon\Crypt as PhalconCrypt` → `use Phalcon\Encryption\Crypt`，代码与 docblock 中 `PhalconCrypt` 引用同步改写为短名；别名与新短名无关或短名冲突时保留 ✅
 - [x] 规则执行顺序修复：自定义规则先于 Rector 内置 `RenameClassRector` 执行，避免后者抢先替换节点丢失「内联/短名」原始写法信息 ✅
 - [x] 规则集级测试（Phalcon50Set）覆盖多规则协作场景 ✅
+- [x] 真实项目实测验证：**Phalcon 4.0.2 → Phalcon 5.23.0** 完整升级流程 ✅
 - [x] `di:beforeServiceResolve` 监听器返回值迁移：剥离 `return true;` 等标量/数组返回值（Phalcon 5 中非 `null` 返回值会短路服务解析，使 `getShared()` 返回 `true`/`false`），保留对象返回值，移除失效的返回类型声明，并在每处 `return;` 上方写入原因注释（带标记、幂等） ✅
 - [ ] 发布到 Packagist，并尝试收录进 `rectorphp` 官方组织
 - [ ] `Phalcon\Validation\Validator\*` 方法签名变更的自动适配（如 `ValidationInterface::add()` 的 `$field` 类型放宽）
