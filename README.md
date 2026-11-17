@@ -56,9 +56,9 @@ rector 启动
 ```
 
 
-### 方式二：手动加载
+### 方式二：SetList 常量配置
 
-不想用`rector/extension-installer`插件的话，在项目根目录 `rector.php` 中手动引用规则集路径：
+不想依赖自动加载时，可以在项目根目录 `rector.php` 中使用公共 SetList 常量。当前 `main` 分支仅提供 Phalcon 4 → 5 规则集：
 
 ```php
 <?php
@@ -66,17 +66,22 @@ rector 启动
 declare(strict_types=1);
 
 use Rector\Config\RectorConfig;
+use RectorPhalcon\Set\PhalconSetList;
 
-return static function (RectorConfig $rectorConfig): void {
-    $rectorConfig->paths([
+return RectorConfig::configure()
+    ->withPaths([
         __DIR__ . '/src',
+    ])
+    ->withSets([
+        PhalconSetList::FROM_PHALCON_4_TO_5,
     ]);
-
-    $rectorConfig->sets([
-        __DIR__ . '/vendor/xuwenxiong/rector-phalcon/config/sets/phalcon50.php',
-    ]);
-};
 ```
+
+`PhalconSetList::UP_TO_PHALCON_50` 是 `FROM_PHALCON_4_TO_5` 的别名，保持 Rector 扩展常见的 `UP_TO_*` 命名风格。
+
+这两个常量都指向 `config/sets/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。后续 Phalcon 3 → 4 与 3 → 5 能力会在同一个公共 `PhalconSetList` 中扩展，用户无需更换入口类；3 → 5 直接升级仍建议通过后续 CLI wrapper 分阶段调用。
+
+如果已经使用方式一的自动加载，不要在 `withSets()` 中重复添加同一个常量。
 
 ### 运行
 

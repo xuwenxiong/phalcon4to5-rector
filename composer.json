@@ -23,7 +23,8 @@
             "Phalcon4To5\\Rector\\": [
                 "src",
                 "rules"
-            ]
+            ],
+            "RectorPhalcon\\Set\\": "src/Set"
         }
     },
     "autoload-dev": {
