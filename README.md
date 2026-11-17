@@ -56,9 +56,9 @@ rector 启动
 ```
 
 
-### 方式二：SetList 常量配置
+### 方式二：手动加载
 
-不想依赖自动加载时，可以在项目根目录 `rector.php` 中使用公共 SetList 常量。当前 `main` 分支仅提供 Phalcon 4 → 5 规则集：
+不想多引入`rector/extension-installer`插件的话，在项目根目录 `rector.php` 中手动引用规则集配置：
 
 ```php
 <?php
@@ -73,7 +73,7 @@ return RectorConfig::configure()
         __DIR__ . '/src',
     ])
     ->withSets([
-        PhalconSetList::FROM_PHALCON_4_TO_5,
+        PhalconSetList::FROM_PHALCON_4_TO_5,//别名：UP_TO_PHALCON_50
     ]);
 ```
 
