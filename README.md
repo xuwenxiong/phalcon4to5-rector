@@ -9,8 +9,6 @@ phalcon框架自动升级工具（phalcon4 → phalcon5）
 
 Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，实现 Phalcon 5 [官方升级指南](https://docs.phalcon.io/5.23/upgrade) 中的破坏性变更，让应用代码升级尽可能自动化。
 
-> ⚠️ **开发测试阶段**：本项目目前处于开发测试阶段，规则覆盖度和行为仍在迭代验证中，**暂不能用于生产**。使用前请务必先 `--dry-run` 预览全部变更并人工审查，再应用到代码。
-
 > 📌 **实测场景**：本项目的规则行为已在真实项目上验证——**Phalcon 4.0.2 → Phalcon 5.23.0** 的完整升级流程。
 
 ## 功能
@@ -64,8 +62,8 @@ return static function (RectorConfig $rectorConfig): void {
 先预览变更，确认后再应用：
 
 ```bash
-vendor/bin/rector process src --dry-run   # 预览 diff
-vendor/bin/rector process src             # 应用变更
+vendor/bin/rector process src --dry-run   # 预览变更：该命令不会改代码，仅预览变更
+vendor/bin/rector process src             # 应用变更：该命令会改代码，建议单独开分支执行，可以用git看到改了什么
 ```
 
 ## 支持的规则
