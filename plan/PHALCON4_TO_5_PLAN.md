@@ -10,6 +10,17 @@
 
 本文档既是对现有 4 → 5 能力的 Implementation Plan 归档，也可作为后续新增 Phalcon 3 → 4 规则集时参考的模板。
 
+### 规则集命名约定
+
+`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。
+
+后续版本演进约定：
+
+- Phalcon 5.0.x 补丁版本，以及无破坏性变更的 5.x 小版本：继续使用 `phalcon50.php`。
+- 仅对较新 5.x 成立的破坏性变更：新增附加规则集，如 `config/sets/phalcon513.php`，不重命名 `phalcon50.php`。
+- Phalcon 5 → 6 的新主版本：新增 `config/sets/phalcon60.php`。
+- `extra.rector.includes` 继续只登记 `phalcon50.php`，避免用户升级后自动加载行为发生变化。
+
 ---
 
 ## 一、项目定位与目标

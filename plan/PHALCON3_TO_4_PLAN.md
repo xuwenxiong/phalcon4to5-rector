@@ -6,6 +6,14 @@
 >
 > 目标：在同一项目中增加 Phalcon 3 → 4 自动升级能力。
 
+### 规则集命名约定
+
+`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，不是只支持 5.0.0，也不是 50.x。当前规则集已验证到 Phalcon 5.23.0。后续若 Phalcon 5.x 小版本引入破坏性变更，将采用附加规则集（如 `phalcon513.php`），不重命名基础规则集。
+
+同理，规划中的 `config/sets/phalcon40.php` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
+
+`extra.rector.includes` 继续只登记 `phalcon50.php`，避免多套规则被 extension-installer 无条件同时加载。
+
 ---
 
 ## 一、总体结论

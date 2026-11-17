@@ -27,6 +27,8 @@ composer require --dev xuwenxiong/rector-phalcon
 
 > 前提：项目已安装 `rector/rector`。本包是 Rector 扩展包，依赖 Rector 运行时；若尚未安装，请先执行 `composer require --dev rector/rector`。
 
+> 命名说明：`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。若未来 Phalcon 5.x 的小版本引入新的破坏性变更，会以附加规则集形式提供，而不是重命名现有规则集。
+
 ### 方式一：自动加载（推荐）
 
 本包已通过 `extra.rector.includes` 注册规则集。在项目中安装 [`rector/extension-installer`](https://github.com/rectorphp/extension-installer) 插件后，`composer install` 时会自动发现并加载 `phalcon50` 规则集，无需任何手动配置：
