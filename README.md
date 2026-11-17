@@ -37,8 +37,8 @@ composer require --dev rector/extension-installer
 
 #### 原理
 
-**`composer install/update`时扫描`config/sets/phalcon50.php`中的规则配置生成`vendor/rector/extension-installer/src/GeneratedConfig.php`**，
-**Rector 启动时`Rector\BootstrapExtensionConfigResolver`自动加载 `GeneratedConfig.php`中规则配置**。所以在项目的 `rector.php` 里不用再手写 `$rectorConfig->sets([...])`。
+`composer install/update`时扫描`config/sets/phalcon50.php`中的规则配置生成`vendor/rector/extension-installer/src/GeneratedConfig.php`，
+Rector 启动时`Rector\BootstrapExtensionConfigResolver`自动加载 `GeneratedConfig.php`中规则配置。所以在项目的 `rector.php` 里不用再手写 `$rectorConfig->sets([...])`。
 ```text
 composer install/update
   └─ rector/extension-installer 扫描 vendor/ 下所有包的 composer.json
