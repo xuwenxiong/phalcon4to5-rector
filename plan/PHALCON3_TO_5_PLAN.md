@@ -314,7 +314,7 @@ src/Upgrade/Tests/
 
 当前 `composer.lock` 固定的是 `phalcon/ide-stubs: ^5.0`。
 
-3 → 4 类重命名是配置驱动、不依赖反射；但当前 P1 已启用 ACL 方法重命名，因此 `phalcon40` 阶段需要 `^4.0` stubs。
+3 → 4 类重命名是配置驱动、不依赖反射；但当前 P1 已启用 ACL / Paginator 方法重命名和 CLI Console 类型识别，因此 `phalcon40` 阶段需要 `^4.0` stubs。
 
 CI 至少分两个 job：
 
@@ -346,6 +346,7 @@ CI 至少分两个 job：
 | `Phalcon4` 的 `RemovedClassUsageHintRector` | 阶段 1 使用 |
 | `Phalcon4` 的 ACL / Paginator `RenameMethodRector` | 阶段 1 使用，需 `^4.0` stubs |
 | `Phalcon4` 的 `RenamePaginatorBeforePropertyRector` | 阶段 1 使用 |
+| `Phalcon4` 的 `RenameCliConsoleAddModulesRector` | 阶段 1 使用 |
 | `Phalcon5` 全套规则 | 阶段 2 使用 |
 
 ### 8.2 需要额外验证的规则
@@ -355,7 +356,7 @@ CI 至少分两个 job：
 | `TextAndHelperToSupportHelperRector` | Phalcon 3 只有 `Phalcon\Text`，`Phalcon\Helper\*` 是 v4 才出现；3 → 5 覆盖率取决于 3 → 4 P1 是否实现 `Text → Helper\Str` |
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 的 Cache 是架构级重构，P0 只做类重命名；此 v5 规则会看到 v4 形态后才可靠 |
-| 方法重命名 | 3 → 4 已实现 ACL、Paginator 子集；CLI 等方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
+| 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
 
 ### 8.3 不应在同一次运行中混用
 
@@ -509,7 +510,7 @@ plan/PHALCON4_TO_5_PLAN.md                         # 标注 direct-upgrade 复�
 
 理由：
 
-- 现在 3 → 4 只完成 P0，直接升级的完整度仍受 P1/P2 实现进度限制。
+- 现在 3 → 4 已完成 P0 及部分 P1 方法重命名，直接升级的完整度仍受 P1/P2 实现进度限制。
 - 显式阶段隔离是所有后续方案的基础。
 - 集成 fixture 能提前暴露两阶段真实交互问题。
 - CLI wrapper 是可玩性提升，不是正确性前提。

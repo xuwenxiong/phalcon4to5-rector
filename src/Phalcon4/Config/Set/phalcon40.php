@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
+use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
@@ -23,6 +24,7 @@ return static function (RectorConfig $rectorConfig): void {
         RemovedClassUsageHintRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
+        RenameCliConsoleAddModulesRector::class,
     ]);
 
     // ---------------------------------------------------------------------
