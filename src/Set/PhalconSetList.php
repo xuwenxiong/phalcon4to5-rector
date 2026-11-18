@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace RectorPhalcon\Set;
 
+use RectorPhalcon\Phalcon5\Set\Phalcon5SetList;
+
 /**
  * @api
  */
@@ -12,7 +14,7 @@ final class PhalconSetList
     /**
      * @var string
      */
-    public const FROM_PHALCON_4_TO_5 = __DIR__ . '/../../config/sets/phalcon50.php';
+    public const FROM_PHALCON_4_TO_5 = Phalcon5SetList::BASELINE;
 
     /**
      * Alias in the `UP_TO_*` style used by Rector extension set lists.

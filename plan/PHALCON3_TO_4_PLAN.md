@@ -1,16 +1,18 @@
 # Phalcon 3 → 4 自动升级支持规划
 
-> 状态：规划稿。本文只描述设计与实施顺序，不包含代码改动。
+> 状态：规划稿。本文只描述设计与实施顺序，不包含当前分支代码改动。
 >
-> 当前项目：`xuwenxiong/rector-phalcon`，已支持 Phalcon 4 → 5（规则集 `config/sets/phalcon50.php`）。
+> 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准；文中保留的版本脉络和实现细节作为历史规划记录。
+>
+> 当前项目：`xuwenxiong/rector-phalcon`，已支持 Phalcon 4 → 5（规则集 `src/Phalcon5/Config/Set/phalcon50.php`）。
 >
 > 目标：在同一项目中增加 Phalcon 3 → 4 自动升级能力。
 
 ### 规则集命名约定
 
-`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，不是只支持 5.0.0，也不是 50.x。当前规则集已验证到 Phalcon 5.23.0。后续若 Phalcon 5.x 小版本引入破坏性变更，将采用附加规则集（如 `phalcon513.php`），不重命名基础规则集。
+`src/Phalcon5/Config/Set/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，不是只支持 5.0.0，也不是 50.x。当前规则集已验证到 Phalcon 5.23.0。后续若 Phalcon 5.x 小版本引入破坏性变更，将采用附加规则集（如 `phalcon513.php`），不重命名基础规则集。
 
-同理，规划中的 `config/sets/phalcon40.php` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
+同理，规划中的 `src/Phalcon4/Config/Set/phalcon40.php` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
 
 `extra.rector.includes` 继续只登记 `phalcon50.php`，避免多套规则被 extension-installer 无条件同时加载。
 
@@ -20,8 +22,8 @@
 
 建议仍放在当前包中，做成“多规则集”结构：
 
-- `config/sets/phalcon40.php`：负责 Phalcon 3 → 4。
-- `config/sets/phalcon50.php`：保持现有 Phalcon 4 → 5，不破坏现有用户。
+- `src/Phalcon4/Config/Set/phalcon40.php`：负责 Phalcon 3 → 4。
+- `src/Phalcon5/Config/Set/phalcon50.php`：保持现有 Phalcon 4 → 5，不破坏现有用户。
 
 但有一个关键决策：**3 → 4 规则集不要默认加入 `composer.json` 的 `extra.rector.includes` 自动加载**。
 
@@ -57,8 +59,8 @@ rector 启动
 
 | 阶段 | 源版本 | 目标版本 | 规则集 |
 |---|---|---|---|
-| 第一阶段 | Phalcon 3.4.x | Phalcon 4.0 / 4.2 | `config/sets/phalcon40.php` |
-| 第二阶段 | Phalcon 4.x | Phalcon 5.x | 现有 `config/sets/phalcon50.php` |
+| 第一阶段 | Phalcon 3.4.x | Phalcon 4.0 / 4.2 | `src/Phalcon4/Config/Set/phalcon40.php` |
+| 第二阶段 | Phalcon 4.x | Phalcon 5.x | 现有 `src/Phalcon5/Config/Set/phalcon50.php` |
 | 可选串联 | Phalcon 3.4.x | Phalcon 5.x | 分两次运行，或未来提供显式全链路 set |
 
 建议文档写成：
@@ -175,7 +177,7 @@ rules-tests/
 
 ```text
 extra.rector.includes
-  └─ config/sets/phalcon50.php
+  └─ src/Phalcon5/Config/Set/phalcon50.php
 ```
 
 推荐保持不动。
@@ -184,8 +186,8 @@ extra.rector.includes
 
 ```text
 extra.rector.includes
-  ├─ config/sets/phalcon40.php   # 不要默认加
-  └─ config/sets/phalcon50.php
+  ├─ src/Phalcon4/Config/Set/phalcon40.php   # 不要默认加
+  └─ src/Phalcon5/Config/Set/phalcon50.php
 ```
 
 原因：`extension-installer` 生成 `GeneratedConfig.php` 时只做聚合，不判断项目当前用的是 Phalcon 3、4 还是 5；Rector 启动时也是无条件 include。多版本规则同时启用会互相污染。
@@ -193,7 +195,7 @@ extra.rector.includes
 推荐的用户使用方式：
 
 - 4 → 5：继续自动加载，无需改 `rector.php`。
-- 3 → 4：在 `rector.php` 中手动引用 `vendor/xuwenxiong/rector-phalcon/config/sets/phalcon40.php`。
+- 3 → 4：在 `rector.php` 中手动引用 `vendor/xuwenxiong/rector-phalcon/src/Phalcon4/Config/Set/phalcon40.php`。
 - 3 → 5：先手动跑 `phalcon40.php`，再跑默认的 `phalcon50.php`；或未来提供显式 `phalcon34-to-50.php`。
 
 如果未来一定要让两个版本都“自动”，更干净的做法是拆包：
@@ -209,7 +211,7 @@ extra.rector.includes
 
 ### 命名空间
 
-当前 autoload 使用 `Phalcon4To5\Rector\`。继续往这个命名空间下塞 3 → 4 规则会造成语义混乱。
+当前 autoload 使用 `RectorPhalcon\`。继续往这个命名空间下塞 3 → 4 规则会造成语义混乱。
 
 建议单独做一次通用化重构，例如：
 
@@ -253,7 +255,7 @@ Xuwenxiong\RectorPhalcon\Phalcon5\...
 - 每条规则一个目录：`config/configured_rule.php` + `Fixture/*.php.inc`。
 - 有 `-----` 分隔符的文件：上方是输入，下方是期望输出。
 - 没有分隔符的 `skip_*.php.inc`：表示规则必须原样跳过。
-- 增加 `rules-tests/Phalcon4/Phalcon40Set/`，验证多规则协作。
+- 增加 `src/Phalcon4/Tests/Phalcon40Set/`，验证多规则协作。
 
 验收标准建议定为：
 
@@ -288,16 +290,16 @@ Xuwenxiong\RectorPhalcon\Phalcon5\...
   - `Model::save()`
   - 已移除组件
 - 开发目录结构树加入：
-  - `rules/Phalcon4/`
-  - `rules-tests/Phalcon4/`
-  - `config/sets/phalcon40.php`
+  - `src/Phalcon4/Rector/`
+  - `src/Phalcon4/Tests/`
+  - `src/Phalcon4/Config/Set/phalcon40.php`
 - Roadmap 增加 3 → 4 的完成项。
 
 ---
 
 ## 九、推荐实施顺序
 
-1. **P0-1**：建立 `config/sets/phalcon40.php` 空规则集 + `rules-tests/Phalcon4/Phalcon40Set/` 测试骨架，先不注册任何规则。
+1. **P0-1**：建立 `src/Phalcon4/Config/Set/phalcon40.php` 空规则集 + `src/Phalcon4/Tests/Phalcon40Set/` 测试骨架，先不注册任何规则。
 2. **P0-2**：整理 3 → 4 类映射表，逐条写 fixture，再接入 `RenameClassRector` + `RenameUseImportsRector`。
 3. **P0-3**：接入 removed-class TODO 提示规则。
 4. **P1-1**：做 ACL、Paginator、CLI 等确定方法重命名。

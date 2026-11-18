@@ -20,22 +20,21 @@
     },
     "autoload": {
         "psr-4": {
-            "Phalcon4To5\\Rector\\": [
-                "src",
-                "rules"
-            ],
-            "RectorPhalcon\\Set\\": "src/Set"
-        }
+            "RectorPhalcon\\": "src"
+        },
+        "exclude-from-classmap": [
+            "/src/*/Tests/"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Phalcon4To5\\Rector\\Tests\\": "rules-tests"
+            "RectorPhalcon\\Phalcon5\\Tests\\": "src/Phalcon5/Tests"
         }
     },
     "extra": {
         "rector": {
             "includes": [
-                "config/sets/phalcon50.php"
+                "src/Phalcon5/Config/Set/phalcon50.php"
             ]
         }
     },

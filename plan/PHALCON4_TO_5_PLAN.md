@@ -2,9 +2,11 @@
 
 > 状态：已实施，持续迭代中。
 >
+> 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准；本文保留的版本脉络和实现细节作为历史规划记录。
+>
 > 来源：根据当前项目实现代码、`README.md`、`composer.json`、规则集配置和测试结构反向提取整理。
 >
-> 规则集入口：`config/sets/phalcon50.php`。
+> 规则集入口：`src/Phalcon5/Config/Set/phalcon50.php`。
 >
 > 实测基线：Phalcon 4.0.2 → Phalcon 5.23.0 的完整升级流程已在真实项目验证。
 
@@ -12,13 +14,13 @@
 
 ### 规则集命名约定
 
-`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。
+`src/Phalcon5/Config/Set/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。
 
 后续版本演进约定：
 
 - Phalcon 5.0.x 补丁版本，以及无破坏性变更的 5.x 小版本：继续使用 `phalcon50.php`。
-- 仅对较新 5.x 成立的破坏性变更：新增附加规则集，如 `config/sets/phalcon513.php`，不重命名 `phalcon50.php`。
-- Phalcon 5 → 6 的新主版本：新增 `config/sets/phalcon60.php`。
+- 仅对较新 5.x 成立的破坏性变更：新增附加规则集，如 `src/Phalcon5/Config/Set/phalcon513.php`，不重命名 `phalcon50.php`。
+- Phalcon 5 → 6 的新主版本：新增 `src/Phalcon6/Config/Set/phalcon60.php`。
 - `extra.rector.includes` 继续只登记 `phalcon50.php`，避免用户升级后自动加载行为发生变化。
 
 ---
@@ -66,10 +68,10 @@ README 明确提示：项目处于开发测试阶段，生产使用前必须先 
   - `phpunit/phpunit: ^11.5`
   - `rector/rector: ^2.1`
 - 自动加载：
-  - `Phalcon4To5\Rector\` → `src`、`rules`
-  - `Phalcon4To5\Rector\Tests\` → `rules-tests`
+  - `RectorPhalcon\` → `src`、`rules`
+  - `RectorPhalcon\Tests\` → `rules-tests`
 - 规则集登记：
-  - `extra.rector.includes` → `config/sets/phalcon50.php`
+  - `extra.rector.includes` → `src/Phalcon5/Config/Set/phalcon50.php`
 - 插件白名单：
   - 允许 `rector/extension-installer`
 
@@ -80,13 +82,13 @@ composer install / composer update
   └─ rector/extension-installer 扫描 vendor/ 下所有包的 composer.json
       └─ 找出 "type": "rector-extension" 的包
           └─ 读取 extra.rector.includes
-              └─ 本包登记 config/sets/phalcon50.php
+              └─ 本包登记 src/Phalcon5/Config/Set/phalcon50.php
                   └─ 汇总生成 vendor/rector/extension-installer/src/GeneratedConfig.php
 
 rector 启动
   └─ 自动加载 GeneratedConfig.php
       └─ include 其中登记的所有配置文件
-          └─ config/sets/phalcon50.php 被加载
+          └─ src/Phalcon5/Config/Set/phalcon50.php 被加载
               └─ phalcon50.php 中注册的规则生效
 ```
 
@@ -98,7 +100,7 @@ rector 启动
 
 ```php
 $rectorConfig->sets([
-    __DIR__ . '/vendor/xuwenxiong/rector-phalcon/config/sets/phalcon50.php',
+    __DIR__ . '/vendor/xuwenxiong/rector-phalcon/src/Phalcon5/Config/Set/phalcon50.php',
 ]);
 ```
 
@@ -108,7 +110,7 @@ $rectorConfig->sets([
 
 ## 三、规则集组织与执行顺序
 
-规则集入口是 `config/sets/phalcon50.php`，整体分成四部分。
+规则集入口是 `src/Phalcon5/Config/Set/phalcon50.php`，整体分成四部分。
 
 ### 3.1 类与命名空间重命名
 
@@ -171,7 +173,7 @@ $rectorConfig->importNames(false, false);
 
 ### 4.1 类与命名空间重命名
 
-来自 `rules/Phalcon5/PhalconClassRenames.php`。
+来自 `src/Phalcon5/ClassRenames.php`。
 
 精确映射 `MAP`：
 
@@ -221,7 +223,7 @@ Phalcon\Validation\Validator\StringLength
 
 ### 4.2 方法重命名
 
-来自 `config/sets/phalcon50.php`。
+来自 `src/Phalcon5/Config/Set/phalcon50.php`。
 
 | 类 | 旧方法 | 新方法 |
 |---|---|---|
@@ -525,14 +527,14 @@ rules-tests/
 
 单规则测试：
 
-- 目录与 `rules/Phalcon5/Rector/` 一一对应。
+- 目录与 `src/Phalcon5/Rector/Rector/` 一一对应。
 - 每个规则有自己的 `config/configured_rule.php`，只启用该规则。
 - 继承 `Rector\Testing\PHPUnit\AbstractRectorTestCase`。
 - 使用 `#[DataProvider]` 从 `Fixture/` 读取用例。
 
 规则集测试：
 
-- `Phalcon50Set` 加载完整 `config/sets/phalcon50.php`。
+- `Phalcon50Set` 加载完整 `src/Phalcon5/Config/Set/phalcon50.php`。
 - 验证多规则协作场景，例如类重命名、`use` 改写、方法重命名、新类导入同时发生。
 
 ### 5.3 Fixture 约定
@@ -556,7 +558,7 @@ Set-Location "d:\opt\htdocs\rector-phalcon"
 
 & "D:\software\php\php8.4.27\php.exe" "vendor\phpunit\phpunit\phpunit" --colors=never
 
-& "D:\software\php\php8.4.27\php.exe" "vendor\rector\rector\bin\rector" process src --config "config\sets\phalcon50.php" --no-progress-bar
+& "D:\software\php\php8.4.27\php.exe" "vendor\rector\rector\bin\rector" process src --config "src\Phalcon5\Config\Set\phalcon50.php" --no-progress-bar
 ```
 
 ---
@@ -702,7 +704,7 @@ use Phalcon\Loader; new Loader()
 步骤：
 
 1. 确认目标方法在 Phalcon 5 stubs 中存在。
-2. 在 `config/sets/phalcon50.php` 的 `RenameMethodRector` 列表增加 `MethodCallRename`。
+2. 在 `src/Phalcon5/Config/Set/phalcon50.php` 的 `RenameMethodRector` 列表增加 `MethodCallRename`。
 3. 写 fixture，覆盖正常对象调用和无法解析类型时的跳过行为。
 4. 更新 README 的方法重命名表。
 
@@ -725,7 +727,7 @@ use Phalcon\Loader; new Loader()
    - 成功改写。
    - 原样跳过。
    - 重复运行幂等。
-6. 在 `config/sets/phalcon50.php` 的自定义规则数组中注册。
+6. 在 `src/Phalcon5/Config/Set/phalcon50.php` 的自定义规则数组中注册。
 7. 必须放在 `RenameClassRector` 之前。
 8. 更新 README 和 Roadmap。
 
@@ -746,36 +748,36 @@ use Phalcon\Loader; new Loader()
 composer.json
   - 包类型、autoload、extra.rector.includes、插件白名单
 
-config/sets/phalcon50.php
+src/Phalcon5/Config/Set/phalcon50.php
   - 4 → 5 规则集入口
   - 自定义规则注册
   - RenameClassRector 配置
   - RenameMethodRector 配置
   - importNames(false, false)
 
-rules/Phalcon5/PhalconClassRenames.php
+src/Phalcon5/ClassRenames.php
   - 类名映射单一数据源
   - MAP / PREFIX_MAP / resolveNewClass()
 
-rules/Phalcon5/PhalconImportShortener.php
+src/Phalcon5/ImportShortener.php
   - Phalcon 新类精确补 use
   - 非 Phalcon 类保持 FQCN
 
-rules/Phalcon5/Rector/New_/
+src/Phalcon5/Rector/Rector/New_/
   - CacheAdapterFactoryConstructorInjectionRector.php
   - AssetsManagerTagFactoryInjectionRector.php
 
-rules/Phalcon5/Rector/StaticCall/
+src/Phalcon5/Rector/Rector/StaticCall/
   - TagToTagFactoryRector.php
   - TextAndHelperToSupportHelperRector.php
 
-rules/Phalcon5/Rector/Stmt/
+src/Phalcon5/Rector/Rector/Stmt/
   - DeduplicateHelperFactoryRector.php
   - DiBeforeServiceResolveListenerReturnRector.php
   - RemovedClassUsageHintRector.php
   - RenameUseImportsRector.php
 
-rules-tests/Phalcon5/
+src/Phalcon5/Tests/
   - Phalcon50Set/
   - Rector/
 

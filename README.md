@@ -9,7 +9,7 @@ Phalcon 框架自动升级工具
 
 Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，目标是为 Phalcon 各主版本升级提供可组合的 Rector 规则集。
 
-> 当前已实现：Phalcon 4 → 5 规则集（`config/sets/phalcon50.php`）。
+> 当前已实现：Phalcon 4 → 5 规则集（`src/Phalcon5/Config/Set/phalcon50.php`）。
 >
 > 规划中：Phalcon 3 → 4、Phalcon 3 → 5 分阶段直接升级。
 
@@ -33,7 +33,7 @@ composer require --dev xuwenxiong/rector-phalcon
 
 > 前提：项目已安装 `rector/rector`。本包是 Rector 扩展包，依赖 Rector 运行时；若尚未安装，请先执行 `composer require --dev rector/rector`。
 
-> 命名说明：`config/sets/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。若未来 Phalcon 5.x 的小版本引入新的破坏性变更，会以附加规则集形式提供，而不是重命名现有规则集。
+> 命名说明：`src/Phalcon5/Config/Set/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，**不是只支持 Phalcon 5.0.0，也不是 50.x**。当前规则集已覆盖并验证到 Phalcon 5.23.0。若未来 Phalcon 5.x 的小版本引入新的破坏性变更，会以附加规则集形式提供，而不是重命名现有规则集。
 
 ### 方式一：自动加载（推荐）
 
@@ -66,7 +66,7 @@ return RectorConfig::configure()
 
 `PhalconSetList::UP_TO_PHALCON_50` 是 `FROM_PHALCON_4_TO_5` 的别名，保持 Rector 扩展常见的 `UP_TO_*` 命名风格。
 
-这两个常量都指向 `config/sets/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。
+这两个常量都指向 `src/Phalcon5/Config/Set/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。
 
 如果已经使用方式一的自动加载，不要在 `withSets()` 中重复添加同一个常量。
 
@@ -256,7 +256,7 @@ public function beforeServiceResolve(EventInterface $event, Di $di, array $data)
 
 > 注：5.0–5.12 仍是「非对象返回被忽略」的旧判定，5.13 起收紧为严格 `=== null`。因此本规则对所有 v5 目标都安全——在旧 5.x 上是无害的写法统一，在新 5.x 上是必需的修复。
 
-- `RenameUseImportsRector` — 改写类重命名后残留的 `use` 导入语句（Rector 2.x 的 `RenameClassRector` 只重命名内联引用，旧导入会留在文件顶部）。与 `RenameClassRector` 共享同一份映射数据（`PhalconClassRenames::MAP` 精确类名映射 + `PhalconClassRenames::PREFIX_MAP` 命名空间前缀映射，经 `PhalconClassRenames::resolveNewClass()` 解析），纯配置驱动、不依赖类反射。**只处理映射范围内的 Phalcon 类**，业务类、第三方库、PHP 内置类的 `use` 一律不动。前缀映射覆盖整个命名空间——v5 中 `Phalcon\Validation` 组件整体迁入 `Phalcon\Filter\Validation`，其全部子命名空间类（`Validator\Email`、`Validator\PresenceOf`、`Validator\Regex`、`Validator\StringLength` 等）随之变更：
+- `RenameUseImportsRector` — 改写类重命名后残留的 `use` 导入语句（Rector 2.x 的 `RenameClassRector` 只重命名内联引用，旧导入会留在文件顶部）。与 `RenameClassRector` 共享同一份映射数据（`ClassRenames::MAP` 精确类名映射 + `ClassRenames::PREFIX_MAP` 命名空间前缀映射，经 `ClassRenames::resolveNewClass()` 解析），纯配置驱动、不依赖类反射。**只处理映射范围内的 Phalcon 类**，业务类、第三方库、PHP 内置类的 `use` 一律不动。前缀映射覆盖整个命名空间——v5 中 `Phalcon\Validation` 组件整体迁入 `Phalcon\Filter\Validation`，其全部子命名空间类（`Validator\Email`、`Validator\PresenceOf`、`Validator\Regex`、`Validator\StringLength` 等）随之变更：
 
 ```php
 // 迁移前
@@ -327,42 +327,52 @@ throw new \Exception('boom');
 ### 目录结构
 
 ```
-├── config/
-│   └── sets/
-│       └── phalcon50.php                                  # 规则集入口（RenameClassRector / 方法重命名配置 + 自定义规则，含注册顺序说明）
-├── rules/
-│   └── Phalcon5/
-│       ├── PhalconClassRenames.php                        # 类名映射单一来源：MAP 精确映射 + PREFIX_MAP 命名空间前缀映射 + resolveNewClass()
-│       ├── PhalconImportShortener.php                     # 规则新引入类（TagFactory 等）补 use 导入并短名化
-│       └── Rector/
-│           ├── New_/
-│           │   ├── AssetsManagerTagFactoryInjectionRector.php     # Assets\Manager 构造器注入 Html\TagFactory
-│           │   └── CacheAdapterFactoryConstructorInjectionRector.php  # Cache 构造器注入 Storage\SerializerFactory
-│           ├── StaticCall/
-│           │   ├── TagToTagFactoryRector.php              # Phalcon\Tag 确定性子集 → $tagFactory->*
-│           │   └── TextAndHelperToSupportHelperRector.php # Text/Helper 静态调用 → Support\Helper\*
-│           └── Stmt/
-│               ├── DeduplicateHelperFactoryRector.php     # 相邻语句重复 new HelperFactory 去重
-│               ├── DiBeforeServiceResolveListenerReturnRector.php  # di:beforeServiceResolve 监听器剥离返回值
-│               ├── RemovedClassUsageHintRector.php        # 已移除类（Phalcon\Kernel 等）注入 TODO 提示
-│               └── RenameUseImportsRector.php             # use 导入改写 + 引用风格保持（内联/短名/相对/分组 use/别名简化/docblock）
-├── rules-tests/
-│   └── Phalcon5/
-│       ├── Phalcon50Set/                                  # 规则集整体测试（多规则协作，config/configured_rule.php 加载 phalcon50.php）
-│       │   ├── Phalcon50SetTest.php
-│       │   ├── config/configured_rule.php
-│       │   └── Fixture/*.php.inc
-│       └── Rector/                                        # 单条规则测试，目录与 rules/ 一一对应
-│           ├── New_/<RuleName>/
-│           │   ├── <RuleName>Test.php
-│           │   ├── config/configured_rule.php             # 仅启用该规则
-│           │   └── Fixture/*.php.inc                      # 输入/期望输出用例
-│           ├── StaticCall/<RuleName>/...
-│           └── Stmt/<RuleName>/...
-├── src/Set/PhalconSetList.php                             # 公共 SetList 常量入口，供后续所有 Phalcon 升级阶段共用
+└── src/
+    ├── Set/
+    │   └── PhalconSetList.php                             # 公共 SetList 常量入口，所有升级阶段共用
+    │
+    ├── Base/
+    │   └── Rector/
+    │       └── Stmt/
+    │           ├── AbstractRenameUseImportsRector.php     # use 导入改写的版本无关基类
+    │           └── AbstractRemovedClassUsageHintRector.php# 已移除类 TODO 提示的版本无关基类
+    │
+    ├── Support/
+    │   ├── Set/ComposerBased/                             # Composer-based 版本探测与规则集选择骨架
+    │   └── ValueObject/PhalconVersion.php                 # Phalcon 主版本值对象
+    │
+    ├── Upgrade/                                           # 跨版本直接升级编排（如 3→5）
+    │
+    ├── Phalcon5/
+    │   ├── Config/Set/
+    │   │   └── phalcon50.php                              # 4→5 规则集入口
+    │   ├── Set/
+    │   │   └── Phalcon5SetList.php                        # 版本内部 SetList
+    │   ├── ClassRenames.php                               # 类名映射单一来源：MAP + PREFIX_MAP
+    │   ├── ImportShortener.php                            # 规则新引入 Phalcon 类补 use 导入
+    │   ├── Rector/
+    │   │   ├── New_/
+    │   │   │   ├── AssetsManagerTagFactoryInjectionRector.php
+    │   │   │   └── CacheAdapterFactoryConstructorInjectionRector.php
+    │   │   ├── StaticCall/
+    │   │   │   ├── TagToTagFactoryRector.php
+    │   │   │   └── TextAndHelperToSupportHelperRector.php
+    │   │   └── Stmt/
+    │   │       ├── DeduplicateHelperFactoryRector.php
+    │   │       ├── DiBeforeServiceResolveListenerReturnRector.php
+    │   │       ├── RemovedClassUsageHintRector.php        # 只提供 v5 提示清单
+    │   │       └── RenameUseImportsRector.php             # 只提供 v5 类名映射
+    │   └── Tests/
+    │       ├── Phalcon50Set/                              # 规则集整体测试
+    │       └── Rector/                                    # 单条规则测试
+    │           ├── New_/<RuleName>/
+    │           ├── StaticCall/<RuleName>/
+    │           └── Stmt/<RuleName>/
+    │
+    └── Phalcon4/                                          # 未来 3→4 阶段规则目录
 ├── docs/                                                  # 通用使用说明文档
 ├── plan/                                                  # 各升级路径规划文档
-├── composer.json                                          # rector-extension 约定：extra.rector.includes 声明自动加载规则集
+├── composer.json                                          # extra.rector.includes 指向 src/Phalcon5/Config/Set/phalcon50.php
 ├── phpunit.xml
 └── README.md
 ```
@@ -390,16 +400,19 @@ Set-Location "d:\opt\htdocs\rector-phalcon"
 & "D:\software\php\php8.4.27\php.exe" "vendor\phpunit\phpunit\phpunit" --colors=never
 
 # 运行 rector CLI 处理你自己的项目
-& "D:\software\php\php8.4.27\php.exe" "vendor\rector\rector\bin\rector" process src --config "config\sets\phalcon50.php" --no-progress-bar
+& "D:\software\php\php8.4.27\php.exe" "vendor\rector\rector\bin\rector" process src --config "src\Phalcon5\Config\Set\phalcon50.php" --no-progress-bar
 ```
 
 ## Roadmap
 
 ### 通用架构
 
+- [x] 统一根命名空间 `RectorPhalcon\` 对应 `src/`
+- [x] 按目标版本划分目录：`src/Phalcon5/`、未来的 `src/Phalcon4/`
+- [x] 抽象规则基类放在 `src/Base/`，通用支持代码放在 `src/Support/`
 - [x] 公共 SetList 常量入口 `RectorPhalcon\Set\PhalconSetList`，后续升级阶段共用同一入口
 - [x] 当前已实现规则集通过 `extra.rector.includes` 自动加载
-- [ ] 按目标版本自动选择规则集的 Composer-based 配置
+- [ ] 按目标版本自动选择规则集的 Composer-based 配置接入
 - [ ] Phalcon 3 → 4、Phalcon 3 → 5 各阶段规则集接入公共入口
 
 ### 当前已实现：Phalcon 4 → 5
