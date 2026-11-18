@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1/P2 持续迭代中。
+> 状态：P0 已实施，P1 的 stubs CI 已实施，其余 P1/P2 持续迭代中。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -399,6 +399,15 @@ src/Phalcon4/Tests/
 vendor/bin/phpunit --colors=never
 ```
 
+CI 使用 `.github/workflows/tests.yml` 分阶段切换 stubs：
+
+| Job | stubs | 执行范围 |
+|---|---|---|
+| `phalcon40` | `phalcon/ide-stubs:^4.0` | `--filter Phalcon4`，覆盖 3 → 4 单规则与 `Phalcon40Set` |
+| `phalcon50` | `phalcon/ide-stubs:^5.0` | 全量 PHPUnit |
+
+`phalcon40` 阶段不跑全量测试，是为了避免用 `^4.0` stubs 验证依赖 `^5.0` 类型解析的 4 → 5 方法重命名规则。
+
 Windows 本地开发命令：
 
 ```powershell
@@ -533,7 +542,7 @@ P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵，用户侧
 
 ### 8.2 P1：方法与常量迁移（待实施）
 
-- [ ] 建立 `phalcon/ide-stubs:^4.0` CI job。
+- [x] 建立 `phalcon/ide-stubs:^4.0` CI job。
 - [ ] ACL 方法重命名：
   - `isResource()` → `isComponent()`
   - `addResource()` → `addComponent()`

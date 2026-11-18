@@ -1,0 +1,41 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  phpunit:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: phalcon40
+            php: '8.4'
+            stubs: '^4.0'
+            phpunit_args: '--filter Phalcon4'
+          - name: phalcon50
+            php: '8.4'
+            stubs: '^5.0'
+            phpunit_args: ''
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: xml
+          coverage: none
+
+      - name: Install dependencies with Phalcon ${{ matrix.stubs }} stubs
+        run: composer require --dev "phalcon/ide-stubs:${{ matrix.stubs }}" --no-interaction --no-progress --with-all-dependencies
+
+      - name: Validate composer
+        run: composer validate --no-check-publish
+
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit ${{ matrix.phpunit_args }} --colors=never
