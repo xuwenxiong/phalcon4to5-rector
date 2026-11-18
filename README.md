@@ -1,21 +1,27 @@
 # rector-phalcon
 
-phalcon框架自动升级工具（phalcon4 → phalcon5）
-基于 [Rector](https://getrector.com/) 的 Phalcon框架 4 → 5 自动升级规则集。
+Phalcon 框架自动升级工具
+基于 [Rector](https://getrector.com/) 的 Phalcon 多版本升级规则集。
 
 **仓库**：[github.com/xuwenxiong/rector-phalcon](https://github.com/xuwenxiong/rector-phalcon)
 
 **作者**：[xuwenxiong](https://github.com/xuwenxiong)
 
-Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，实现 Phalcon 5 [官方升级指南](https://docs.phalcon.io/5.23/upgrade) 中的破坏性变更，让应用代码升级尽可能自动化。
+Rector 官方目前没有 Phalcon 规则包，本项目按照 `rectorphp/rector-symfony` 的扩展包结构，目标是为 Phalcon 各主版本升级提供可组合的 Rector 规则集。
 
-> 📌 **实测场景**：本项目的规则行为已在真实项目上验证——**Phalcon 4.0.2 → Phalcon 5.23.0** 的完整升级流程。
+> 当前已实现：Phalcon 4 → 5 规则集（`config/sets/phalcon50.php`）。
+>
+> 规划中：Phalcon 3 → 4、Phalcon 3 → 5 分阶段直接升级。
 
-## 功能
+> 📌 **实测场景**：当前已实现的规则行为已在真实项目上验证——**Phalcon 4.0.2 → Phalcon 5.23.0** 的完整升级流程。
+
+## 当前已实现能力（Phalcon 4 → 5）
 
 - 一键重命名迁移到新命名空间的类（`Phalcon\Loader` → `Phalcon\Autoload\Loader` 等）
 - 方法重命名（`Loader::registerDirs()` → `setDirectories()`、`Asset::getLocal()` → `isLocal()` 等）
 - 构造函数注入修复（`Cache\AdapterFactory` 自动注入 `Storage\SerializerFactory`）
+
+后续版本会继续以独立规则集和公共 `PhalconSetList` 常量的方式接入，不会把不同升级阶段的规则混在同一个规则集里。
 
 ## 安装
 
@@ -31,15 +37,15 @@ composer require --dev xuwenxiong/rector-phalcon
 
 ### 方式一：自动加载（推荐）
 
-本包已通过 `extra.rector.includes` 注册规则集。在项目中安装 [`rector/extension-installer`](https://github.com/rectorphp/extension-installer) 插件后，`composer install` 时会自动发现并加载 `phalcon50` 规则集，无需任何手动配置：
+本包已通过 `extra.rector.includes` 注册当前已实现的 `phalcon50` 规则集。在项目中安装 [`rector/extension-installer`](https://github.com/rectorphp/extension-installer) 插件后，`composer install` 时会自动发现并加载该规则集，无需任何手动配置。后续新增升级阶段时，会按独立规则集方式接入，避免不同版本规则互相污染：
 
 ```bash
 composer require --dev rector/extension-installer
 ```
 
-### 方式二：手动加载
+### 方式二：SetList 常量配置
 
-不想多引入`rector/extension-installer`插件的话，在项目根目录 `rector.php` 中手动引用规则集配置：
+不想多引入 `rector/extension-installer` 插件的话，可以在项目根目录 `rector.php` 中通过公共 SetList 常量选择规则集：
 
 ```php
 <?php
@@ -74,7 +80,9 @@ vendor/bin/rector process src --dry-run   # 预览变更：该命令不会改代
 vendor/bin/rector process src             # 应用变更：该命令会改代码，建议单独开分支执行，可以用git看到改了什么
 ```
 
-## 支持的规则
+## 当前已实现规则（Phalcon 4 → 5）
+
+以下规则属于当前 `phalcon50` 规则集。后续 Phalcon 3 → 4、Phalcon 3 → 5 的规则会以独立规则集和常量形式补充，不会混入当前规则表。
 
 ### 类与命名空间重命名（RenameClassRector）
 
@@ -302,7 +310,7 @@ throw new \Exception('boom');
 - 状态方法：`setTitle()`/`getTitle()` 系列、`setDefault()`/`getValue()` 系列、`setDocType()`/`getDocType()`
 - DI 访问器：`setDI()`/`getDI()`/`getEscaper()`/`getUrlService()`
 
-## 已知限制
+## 当前规则集已知限制（Phalcon 4 → 5）
 
 - **`Phalcon\Tag` 仅迁移确定性子集**：输入字段方法、`friendlyText` 和 doctype 常量已自动迁移；`linkTo`、`image`、`select`、`form` 等参数语义非确定的方法需手动改写（见上方 `TagToTagFactoryRector` 的说明）。`Phalcon\Text` / `Phalcon\Helper` 静态调用已全量迁移，`Phalcon\Exception` 已自动重命名，`Phalcon\Kernel` 已自动添加 TODO 提示。
 - **反射依赖**：方法重命名规则依赖 `phalcon/ide-stubs` 提供的类定义来解析类型，无法解析的类型会被跳过。`use` 导入重命名（`RenameUseImportsRector`）为纯配置驱动，不受此限制。
@@ -351,7 +359,10 @@ throw new \Exception('boom');
 │           │   └── Fixture/*.php.inc                      # 输入/期望输出用例
 │           ├── StaticCall/<RuleName>/...
 │           └── Stmt/<RuleName>/...
-├── composer.json                                          # rector-extension 约定：rector/rules-auto 段声明规则集
+├── src/Set/PhalconSetList.php                             # 公共 SetList 常量入口，供后续所有 Phalcon 升级阶段共用
+├── docs/                                                  # 通用使用说明文档
+├── plan/                                                  # 各升级路径规划文档
+├── composer.json                                          # rector-extension 约定：extra.rector.includes 声明自动加载规则集
 ├── phpunit.xml
 └── README.md
 ```
@@ -370,7 +381,7 @@ vendor/bin/phpunit --colors=never
 
 ### 本地开发环境（Windows）
 
-本项目用 **PHP 8.4** 开发与测试（PHP 8.4 已验证 20 个测试全绿；包要求 PHP 8.1+，见 `composer.json`）。
+本项目用 **PHP 8.4** 开发与测试（PHP 8.4 已验证当前测试全绿；包要求 PHP 8.1+，见 `composer.json`）。
 
 ```powershell
 Set-Location "d:\opt\htdocs\rector-phalcon"
@@ -383,6 +394,15 @@ Set-Location "d:\opt\htdocs\rector-phalcon"
 ```
 
 ## Roadmap
+
+### 通用架构
+
+- [x] 公共 SetList 常量入口 `RectorPhalcon\Set\PhalconSetList`，后续升级阶段共用同一入口
+- [x] 当前已实现规则集通过 `extra.rector.includes` 自动加载
+- [ ] 按目标版本自动选择规则集的 Composer-based 配置
+- [ ] Phalcon 3 → 4、Phalcon 3 → 5 各阶段规则集接入公共入口
+
+### 当前已实现：Phalcon 4 → 5
 
 - [x] `Phalcon\Tag` 确定性子集 → `Phalcon\Html\TagFactory` 迁移规则 ✅（`linkTo`/`image`/`select` 等复杂方法仍需手动改写）
 - [x] `Phalcon\Assets\Manager` 构造器注入 `Phalcon\Html\TagFactory` ✅

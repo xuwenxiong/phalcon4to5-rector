@@ -2,7 +2,7 @@
     "name": "xuwenxiong/rector-phalcon",
     "type": "rector-extension",
     "license": "MIT",
-    "description": "Rector upgrade rules for Phalcon Framework 4 to 5",
+    "description": "Rector upgrade rules for Phalcon Framework",
     "authors": [
         {
             "name": "xuwenxiong",
