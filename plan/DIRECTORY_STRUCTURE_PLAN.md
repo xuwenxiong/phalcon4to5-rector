@@ -1,6 +1,6 @@
 # 项目目录结构与命名空间重构规划
 
-> 状态：规划稿。本文只描述目标结构与迁移顺序，不修改代码。
+> 状态：已实施。本文记录已落地的目标结构与迁移顺序。
 >
 > 前提：项目尚未正式发布，**不需要兼容既有用户、既有类命名空间或既有规则集路径**。因此本规划采用干净切换，不保留旧包装层。
 
@@ -22,7 +22,7 @@ src/Set/
 这种结构在只有 4 → 5 时还能接受，但多版本共存时会带来几个问题：
 
 1. 一个版本的实现分散在多个根目录，定位成本高。
-2. `Phalcon4To5\Rector\`、`Phalcon3To4\Rector\` 等命名空间会继续强化“按源版本命名”的耦合。
+2. `RectorPhalcon\`、`Phalcon3To4\Rector\` 等命名空间会继续强化“按源版本命名”的耦合。
 3. 版本之间复用规则基类时，容易让 `Phalcon4` 依赖 `Phalcon5` 的内部实现。
 4. 新增版本时要同时改多个根目录，扩展成本高。
 
@@ -48,7 +48,7 @@ RectorPhalcon\  →  src/
 不再保留：
 
 ```text
-Phalcon4To5\Rector\
+RectorPhalcon\
 Phalcon3To4\Rector\
 RectorPhalcon\Set\
 ```
@@ -160,8 +160,8 @@ project-root/
 │   │   ├── Set/
 │   │   │   └── Phalcon5SetList.php            # v5 内部常量
 │   │   │
-│   │   ├── ClassRenames.php                   # 原 PhalconClassRenames
-│   │   ├── ImportShortener.php                # 原 PhalconImportShortener
+│   │   ├── ClassRenames.php                   # 原 ClassRenames
+│   │   ├── ImportShortener.php                # 原 ImportShortener
 │   │   │
 │   │   ├── Rector/
 │   │   │   ├── New_/
@@ -249,13 +249,13 @@ src/Set/PhalconSetList.php
 公共常量示例：
 
 ```text
-PhalconSetList::FROM_PHALCON_3_TO_4
-PhalconSetList::FROM_PHALCON_4_TO_5
+PhalconSetList::UP_PHALCON_3_TO_4
+PhalconSetList::UP_PHALCON_4_TO_5
 PhalconSetList::UP_TO_PHALCON_50
 PhalconSetList::COMPOSER_BASED
 ```
 
-当前 `main` 只实现 `FROM_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
+当前分支只实现 `UP_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
 
 ### 5.2 版本内部 SetList
 
@@ -288,13 +288,13 @@ src/Phalcon4/Config/Set/phalcon40.php
 - 控制规则顺序。
 - 控制 `importNames(false, false)` 等全局策略。
 
-`composer.json` 的 `extra.rector.includes` 改为：
+`composer.json` 不配置 `extra.rector.includes`，规则集通过 `PhalconSetList` 显式选择：
 
 ```text
-src/Phalcon5/Config/Set/phalcon50.php
+PhalconSetList::UP_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
 ```
 
-由于不考虑兼容，不保留根 `config/sets/phalcon50.php`。
+决策见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ### 5.4 具体规则实现
 
@@ -312,7 +312,7 @@ RectorPhalcon\Phalcon5\Rector\...
 RectorPhalcon\Phalcon4\Rector\...
 ```
 
-当前代码迁移映射：
+已完成的迁移映射：
 
 | 旧文件 | 新文件 |
 |---|---|
@@ -429,7 +429,7 @@ bin/rector-phalcon
   - `src/Phalcon4/Config/Set/phalcon40.php`
   - `src/Phalcon5/Config/Set/phalcon50.php`
 - 每阶段启动独立 Rector 进程。
-- 第一阶段设置 autoload gate 环境变量，避免 `extra.rector.includes` 注入 v5 规则。
+- 每阶段使用显式配置，只加载对应版本的 set。
 - `--dry-run` 基于临时副本，先真实执行第一阶段，再 dry-run 第二阶段。
 
 ---
@@ -470,15 +470,15 @@ src/Phalcon4/
 
 1. 移动规则实现：
    ```text
-   rules/Phalcon5/* → src/Phalcon5/Rector 或 src/Phalcon5/*
+   src/Phalcon5/Rector/* → src/Phalcon5/Rector 或 src/Phalcon5/*
    ```
 2. 移动测试：
    ```text
-   rules-tests/Phalcon5/* → src/Phalcon5/Tests/*
+   src/Phalcon5/Tests/* → src/Phalcon5/Tests/*
    ```
 3. 移动 set 配置：
    ```text
-   config/sets/phalcon50.php → src/Phalcon5/Config/Set/phalcon50.php
+   src/Phalcon5/Config/Set/phalcon50.php → src/Phalcon5/Config/Set/phalcon50.php
    ```
 4. 命名空间改为：
    ```text
@@ -516,7 +516,7 @@ src/Support/ValueObject/
 
 1. 移动 Phalcon4 规则到 `src/Phalcon4/Rector/`。
 2. 移动 Phalcon4 测试到 `src/Phalcon4/Tests/`。
-3. 移动 `config/sets/phalcon40.php` 到 `src/Phalcon4/Config/Set/phalcon40.php`。
+3. 移动 `src/Phalcon4/Config/Set/phalcon40.php` 到 `src/Phalcon4/Config/Set/phalcon40.php`。
 4. 命名空间改为 `RectorPhalcon\Phalcon4\...`。
 5. 移除对 `RectorPhalcon\Phalcon5` 具体类的继承，改为继承 Base 抽象基类。
 
@@ -532,9 +532,10 @@ autoload-dev.psr-4
   RectorPhalcon\Phalcon5\Tests\ → src/Phalcon5/Tests/
   RectorPhalcon\Phalcon4\Tests\ → src/Phalcon4/Tests/
 
-extra.rector.includes
-  src/Phalcon5/Config/Set/phalcon50.php
+no extra.rector.includes
 ```
+
+规则集通过 `PhalconSetList` 显式选择，不使用自动加载。
 
 删除所有旧 PSR-4 映射：
 
@@ -574,8 +575,8 @@ src/Phalcon4/Tests
 `src/Set/PhalconSetList.php` 改为引用新路径：
 
 ```text
-FROM_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
-FROM_PHALCON_3_TO_4 → src/Phalcon4/Config/Set/phalcon40.php
+UP_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
+UP_PHALCON_3_TO_4 → src/Phalcon4/Config/Set/phalcon40.php
 ```
 
 当前未实现的阶段不提前暴露常量，避免用户误用。
@@ -624,7 +625,7 @@ plan/PHALCON3_TO_5_PLAN.md
 5. `Phalcon4` 不继承 `Phalcon5` 的具体类。
 6. 可被继承的抽象规则基类都在 `src/Base/`；通用支持代码都在 `src/Support/`。
 7. `composer.json` 只有一个生产 PSR-4 根映射：`RectorPhalcon\ → src/`。
-8. `extra.rector.includes` 指向新 set 路径。
+8. `composer.json` 不配置 `extra.rector.includes`，规则集由 `PhalconSetList` 显式选择。
 9. `phpunit.xml` 指向新测试目录。
 10. 全量 PHPUnit 通过。
 11. `composer validate --no-check-publish` 通过。
@@ -677,7 +678,7 @@ Upgrade/
 当前阶段仅暴露：
 
 ```text
-FROM_PHALCON_4_TO_5
+UP_PHALCON_4_TO_5
 UP_TO_PHALCON_50
 ```
 

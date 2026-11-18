@@ -20,31 +20,22 @@
     },
     "autoload": {
         "psr-4": {
-            "Phalcon4To5\\Rector\\": [
-                "src",
-                "rules"
-            ],
-            "RectorPhalcon\\Set\\": "src/Set"
-        }
+            "RectorPhalcon\\": "src"
+        },
+        "exclude-from-classmap": [
+            "/src/*/Tests/"
+        ]
     },
     "autoload-dev": {
         "psr-4": {
-            "Phalcon4To5\\Rector\\Tests\\": "rules-tests"
-        }
-    },
-    "extra": {
-        "rector": {
-            "includes": [
-                "config/sets/phalcon50.php"
-            ]
+            "RectorPhalcon\\Phalcon5\\Tests\\": "src/Phalcon5/Tests",
+            "RectorPhalcon\\Set\\Tests\\": "src/Set/Tests",
+            "RectorPhalcon\\Support\\Tests\\": "src/Support/Tests"
         }
     },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "rector/extension-installer": true
-        }
+        "sort-packages": true
     }
 }
