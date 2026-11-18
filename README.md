@@ -15,11 +15,17 @@
 
 详细规则、限制和 Roadmap 见 [`plan/PHALCON4_TO_5_PLAN.md`](plan/PHALCON4_TO_5_PLAN.md)。
 
-## 运行环境
+## 运行环境建议
 
 - PHP ^8.1
-- Composer
-- 项目需安装 `rector/rector:^2.1`（当前规则集基于 Rector 2.1 API 开发与测试）
+- Composer 2.x
+- 项目需安装 `rector/rector:^2.1`
+
+本项目开发时的环境：
+
+- PHP 8.4.27
+- Composer 2.11.2
+- Rector 2.8.5
 
 ## 安装
 
