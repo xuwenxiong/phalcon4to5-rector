@@ -10,7 +10,7 @@ use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\FilterMigrationHintRector;
-use RectorPhalcon\Phalcon4\Rector\Stmt\FinalGetSourceHintRector;
+use RectorPhalcon\Phalcon4\Rector\Stmt\GetSourceToSetSourceRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\LoggerMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
@@ -37,7 +37,7 @@ return static function (RectorConfig $rectorConfig): void {
         LoggerMigrationHintRector::class,
         SessionMigrationHintRector::class,
         FilterMigrationHintRector::class,
-        FinalGetSourceHintRector::class,
+        GetSourceToSetSourceRector::class,
         ApplicationHandleUriHintRector::class,
         ModelSaveWithDataRector::class,
         RenameUseImportsRector::class,

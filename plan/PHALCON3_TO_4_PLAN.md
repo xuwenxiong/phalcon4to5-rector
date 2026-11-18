@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist、`Model::save($data)` 自动改写、`handle()` URI 提示与 `getSource()` final 提示；剩余工作集中在真实项目验证与发布准备。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist、`Model::save($data)` 自动改写、`handle()` URI 提示与 `getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -426,17 +426,36 @@ $model->save();
 
 已有 URI 参数的调用以及无关对象的 `handle()` 会跳过。
 
-#### 4.4.9 `FinalGetSourceHintRector`
+#### 4.4.9 `GetSourceToSetSourceRector`
 
-对继承 `Phalcon\Mvc\Model` 的类中定义的 `getSource()` 方法输出 3 步 TODO，不自动改写方法体。
+对继承 `Phalcon\Mvc\Model` 的类做结构改写。
 
-提示内容：
+对于固定形态的 `getSource()`：
 
-1. Phalcon 4 `Model::getSource()` 是 `final`，不能再覆盖。
-2. 删除 `getSource()` 覆盖，改在 `initialize()` 中调用 `$this->setSource()`。
-3. 复核表名、schema 与模型元数据。
+```php
+public function getSource()
+{
+    return 'robots';
+}
+```
 
-已有 TODO 标记的方法不会重复添加注释。
+自动删除该方法，并改为：
+
+```php
+public function initialize()
+{
+    $this->setSource('robots');
+}
+```
+
+如果类中已有 `initialize()`，则在方法开头插入 `$this->setSource(...)`，保留原有逻辑。
+
+说明：
+
+- 不会把子类方法真的改名为 `setSource()`：Phalcon 4 父类 `Model::setSource()` 是 `final protected`，子类定义同名方法会 fatal。
+- 只自动改写单一 `return <expr>;` 的固定形态；表达式会原样移到 `setSource()` 参数中。
+- 复杂 `getSource()` 方法保留 3 步 TODO，提示人工提取表名并在 `initialize()` 中调用 `setSource()`。
+- 已有 TODO 标记的方法不会重复添加注释。
 
 ### 4.5 辅助类
 
@@ -489,7 +508,7 @@ src/Phalcon4/Tests/
     └── Stmt/
         ├── CacheMigrationHintRector/
         ├── FilterMigrationHintRector/
-        ├── FinalGetSourceHintRector/
+        ├── GetSourceToSetSourceRector/
         ├── LoggerMigrationHintRector/
         ├── RenameUseImportsRector/
         ├── RemovedClassUsageHintRector/
@@ -507,7 +526,7 @@ src/Phalcon4/Tests/
 - `LoggerMigrationHintRector`：1 个 `.php.inc`
 - `SessionMigrationHintRector`：1 个 `.php.inc`
 - `FilterMigrationHintRector`：1 个 `.php.inc`
-- `FinalGetSourceHintRector`：1 个 `.php.inc`
+- `GetSourceToSetSourceRector`：1 个 `.php.inc`
 - `ApplicationHandleUriHintRector`：1 个 `.php.inc`
 - `ModelSaveWithDataRector`：1 个 `.php.inc`
 - `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
@@ -525,7 +544,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)` 改写、Cache / Logger / Session / Filter / handle URI / getSource checklist、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session / Filter / handle URI checklist、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -642,10 +661,10 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter / handle URI / getSource checklist，以及 `Model::save($data)` 自动改写。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter / handle URI checklist，以及 `Model::save($data)`、`getSource()` → `initialize()` + `setSource()` 自动改写。
 2. 结构性迁移仍以人工确认为主。
-   - Cache、Logger\Multiple、Session、Filter、`handle()` URI、`getSource()` 输出 checklist 或 TODO，但不自动重构架构。
-   - `Model::save($data)` 已自动拆分，但多行/复杂表达式仍需人工确认。
+   - Cache、Logger\Multiple、Session、Filter、`handle()` URI 输出 checklist 或 TODO，但不自动重构架构。
+   - 复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认。
 3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 提示依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
@@ -709,7 +728,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 - [x] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
 - [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
 - [x] `Application` / `Micro::handle()` 缺少 URI 的人工检查提示。
-- [x] `getSource()` 变 final 的迁移提示：`initialize()` + `setSource()`。
+- [x] `getSource()` → `initialize()` + `setSource()` 自动改写；复杂方法保留 TODO。
 
 ### 8.4 验证与发布（待实施）
 
@@ -818,8 +837,9 @@ src/Phalcon4/Rector/Stmt/SessionMigrationHintRector.php
 src/Phalcon4/Rector/Stmt/FilterMigrationHintRector.php
   - 输出旧 Filter 对象 → FilterLocator 的 4 步 checklist
 
-src/Phalcon4/Rector/Stmt/FinalGetSourceHintRector.php
-  - 输出 getSource() final → initialize() + setSource() 的 3 步 checklist
+src/Phalcon4/Rector/Stmt/GetSourceToSetSourceRector.php
+  - 把固定形态 getSource() 改写为 initialize() + setSource()
+  - 复杂方法保留人工迁移 TODO
 
 src/Phalcon4/Rector/Expression/ApplicationHandleUriHintRector.php
   - 输出 handle() 缺少 URI 的 3 步 TODO
