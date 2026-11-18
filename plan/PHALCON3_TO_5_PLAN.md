@@ -357,7 +357,7 @@ CI 至少分两个 job：
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 的 Cache 是架构级重构，P0 只做类重命名；此 v5 规则会看到 v4 形态后才可靠 |
 | 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
-| 常量重命名 | 3 → 4 已实现 Filter 常量；DB 常量到 `Phalcon\Db\Enum` 仍待实施 |
+| 常量重命名 | 3 → 4 已实现 Filter 常量和 DB `FETCH_*` → `Phalcon\Db\Enum`；其他常量迁移仍待实施 |
 
 ### 8.3 不应在同一次运行中混用
 

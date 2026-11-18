@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1 的 stubs CI、ACL/Paginator/CLI 方法重命名、Filter 常量重命名已实施，其余 P1/P2 持续迭代中。
+> 状态：P0 已实施，P1 的 stubs CI、ACL/Paginator/CLI 方法重命名、Filter 与 DB 常量重命名已实施，其余 P1/P2 持续迭代中。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -275,19 +275,20 @@ P1 已实现 ACL、Paginator 与 CLI 子集：
 
 ### 4.3 常量重命名
 
-P1 已实现 Filter 常量的确定性重命名，使用 Rector 内置 `RenameClassConstFetchRector`。
+P1 已实现 Filter 与 DB 常量的确定性重命名，使用 Rector 内置 `RenameClassConstFetchRector`。
 
 | 类/组件 | 旧常量 | 新常量 | 状态 |
 |---|---|---|---|
 | `Phalcon\Filter` | `FILTER_ALPHANUM` | `FILTER_ALNUM` | 已实现 |
 | `Phalcon\Filter` | `FILTER_APHANUM` | `FILTER_ALNUM` | 已实现，兼容升级指南中的拼写 |
 | `Phalcon\Filter` | `FILTER_SPECIAL_CHARS` | `FILTER_SPECIAL` | 已实现 |
+| `Phalcon\Db` | `FETCH_*` | `Phalcon\Db\Enum::FETCH_*` | 已实现，常量名不变 |
 
-Phalcon 3.4 API 中的常量名是 `FILTER_ALPHANUM`；官方升级指南写作 `FILTER_APHANUM`。为避免漏改，两者都映射到 `FILTER_ALNUM`。
+Phalcon 3.4 API 中的 Filter 常量名是 `FILTER_ALPHANUM`；官方升级指南写作 `FILTER_APHANUM`。为避免漏改，两者都映射到 `FILTER_ALNUM`。
 
-同时新增类映射 `Phalcon\Filter` → `Phalcon\Filter\Filter`、`Phalcon\FilterInterface` → `Phalcon\Filter\FilterInterface`。常量规则对 v3 类名引用使用 `RenameClassAndConstFetch`，对 v4 类名引用使用 `RenameClassConstFetch`，因此不依赖 `RenameClassRector` 的执行顺序。
+DB 侧已复用 `ClassRenames::MAP` 中已有的 `Phalcon\Db` → `Phalcon\Db\AbstractDb`。所有 Phalcon 3.4 `Phalcon\Db::FETCH_*` 常量统一改写到 `Phalcon\Db\Enum`，常量名保持不变；清单集中在 `src/Phalcon4/DbConstants.php`。
 
-DB 常量迁移到 `Phalcon\Db\Enum` 仍待实施。
+常量规则对 v3 类名引用使用 `RenameClassAndConstFetch`，对 v4 类名引用使用 `RenameClassConstFetch`，因此不依赖 `RenameClassRector` 的执行顺序。对于 DB，额外覆盖 `Phalcon\Db\AbstractDb`，防止类重命名先发生时常量遗漏。
 
 ### 4.4 自定义规则
 
@@ -391,6 +392,7 @@ src/Phalcon4/Tests/
 │   └── Fixture/*.php.inc
 └── Rector/
     ├── ClassConstFetch/
+    │   ├── RenameDbConstFetchRector/
     │   └── RenameFilterConstFetchRector/
     ├── MethodCall/
     │   └── RenameCliConsoleAddModulesRector/
@@ -403,9 +405,10 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：8 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量与类名协作。
+- `Phalcon40Set`：9 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
+- `RenameDbConstFetchRector`：1 个 `.php.inc`
 - `RemovedClassUsageHintRector`：2 个 `.php.inc`
 - `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
 - `RenameCliConsoleAddModulesRector`：1 个 `.php.inc`
@@ -422,7 +425,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter 常量重命名、ACL/Paginator/CLI 方法重命名、Paginator 属性重命名、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、Paginator 属性重命名、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -533,21 +536,20 @@ src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 
 类重命名、`use` 导入改写和 TODO 提示仍然由映射表驱动，不依赖反射。
 
-ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源。`RenameCliConsoleAddModulesRector` 需要识别 `Phalcon\Cli\Console` 类型，但不需要读取目标方法定义。Filter 常量重命名按类名和常量名匹配，不读取目标常量定义。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
+ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源。`RenameCliConsoleAddModulesRector` 需要识别 `Phalcon\Cli\Console` 类型，但不需要读取目标方法定义。Filter / DB 常量重命名按类名和常量名匹配，不读取目标常量定义。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
 
 ---
 
 ## 七、已知限制
 
-1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator、CLI 重命名和 Filter 常量重命名。
-2. DB 常量迁移到 `Phalcon\Db\Enum` 尚未实现。
-3. 结构性迁移未实现。
+1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator、CLI 重命名和 Filter / DB 常量重命名。
+2. 结构性迁移未实现。
    - Cache、Logger、Session、Filter 只输出 TODO 或保持原样。
-4. `Phalcon\Text` → `Phalcon\Helper\Str` 尚未实现，待 P1。
-5. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
-6. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
-7. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
-8. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
+3. `Phalcon\Text` → `Phalcon\Helper\Str` 尚未实现，待 P1。
+4. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
+5. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
+6. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
+7. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
 
 ---
 
@@ -593,7 +595,9 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
   - `FILTER_ALPHANUM` → `FILTER_ALNUM`
   - `FILTER_APHANUM` → `FILTER_ALNUM`（兼容升级指南拼写）
   - `FILTER_SPECIAL_CHARS` → `FILTER_SPECIAL`
-- [ ] DB 常量迁移到 `Phalcon\Db\Enum`。
+- [x] DB 常量迁移到 `Phalcon\Db\Enum`：
+  - 17 个 Phalcon 3.4 `FETCH_*` 常量统一改写为 `Phalcon\Db\Enum::FETCH_*`
+  - 清单集中在 `src/Phalcon4/DbConstants.php`
 - [ ] `Phalcon\Text` → `Phalcon\Helper\Str`。
 - [ ] 为上述规则补 fixture、规则集测试和文档更新。
 
@@ -683,7 +687,7 @@ composer.json
 src/Phalcon4/Config/Set/phalcon40.php
   - 3 → 4 规则集入口
   - 自定义规则注册
-  - Filter RenameClassConstFetchRector 配置
+  - Filter / DB RenameClassConstFetchRector 配置
   - RenameClassRector 配置
   - ACL / Paginator RenameMethodRector 配置
   - Repository RenamePropertyRector 补充配置
@@ -692,6 +696,9 @@ src/Phalcon4/Config/Set/phalcon40.php
 src/Phalcon4/ClassRenames.php
   - 类名映射单一数据源
   - MAP / PREFIX_MAP / resolveNewClass()
+
+src/Phalcon4/DbConstants.php
+  - Phalcon 3.4 Db FETCH_* 常量清单
 
 src/Phalcon4/Set/Phalcon4SetList.php
   - Phalcon 4 阶段内部 set 常量

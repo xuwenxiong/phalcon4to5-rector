@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
+use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
@@ -31,22 +32,28 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     // ---------------------------------------------------------------------
-    // 2. Filter constant renames
+    // 2. Constant renames
     // ---------------------------------------------------------------------
-    // Configure both the v3 and v4 class names so the rule is order-independent
+    // Configure both the v3 and v4 class names so the rules are order-independent
     // with RenameClassRector below.
-    $rectorConfig->ruleWithConfiguration(RenameClassConstFetchRector::class, [
-        // v3 class references: force the v4 class as well, because the new class
-        // no longer owns the old constant.
+    $dbConstFetchRenames = [];
+    foreach (DbConstants::FETCH as $dbFetchConstant) {
+        $dbConstFetchRenames[] = new RenameClassAndConstFetch('Phalcon\Db', $dbFetchConstant, 'Phalcon\Db\Enum', $dbFetchConstant);
+        $dbConstFetchRenames[] = new RenameClassAndConstFetch('Phalcon\Db\AbstractDb', $dbFetchConstant, 'Phalcon\Db\Enum', $dbFetchConstant);
+    }
+
+    $rectorConfig->ruleWithConfiguration(RenameClassConstFetchRector::class, array_merge([
+        // Filter: v3 class references must become the v4 class as well, because
+        // the new class no longer owns the old constants.
         new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_ALPHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
         new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_APHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
         new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_SPECIAL_CHARS', 'Phalcon\Filter\Filter', 'FILTER_SPECIAL'),
 
-        // v4 class references: order-independent with RenameClassRector below.
+        // Filter: v4 class references, order-independent with RenameClassRector.
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_ALPHANUM', 'FILTER_ALNUM'),
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_APHANUM', 'FILTER_ALNUM'),
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_SPECIAL_CHARS', 'FILTER_SPECIAL'),
-    ]);
+    ], $dbConstFetchRenames));
 
     // ---------------------------------------------------------------------
     // 3. Namespace / class renames (Phalcon 3 -> 4)
