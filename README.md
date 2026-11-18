@@ -19,12 +19,12 @@
 
 - PHP ^8.1
 - Composer
-- 项目需安装 `rector/rector`
+- 项目需安装 `rector/rector:^2.1`（当前规则集基于 Rector 2.1 API 开发与测试）
 
 ## 安装
 
 ```bash
-composer require --dev rector/rector
+composer require --dev rector/rector:^2.1
 composer require --dev xuwenxiong/rector-phalcon
 ```
 
