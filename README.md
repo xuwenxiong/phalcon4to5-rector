@@ -2,7 +2,7 @@
 
 基于 [Rector](https://getrector.com/) 的 Phalcon 框架自动升级工具，目标是以独立规则集支持 Phalcon 各主版本升级。
 
-当前已实现 Phalcon 4 → 5；Phalcon 3 → 4、3 → 5 已规划，详见 [`plan/`](plan/)。
+当前已实现 Phalcon 3 → 4（基础规则）和 Phalcon 4 → 5；Phalcon 3 → 5 直接升级已规划，详见 [`plan/`](plan/)。
 
 ## 总体能力
 
@@ -13,7 +13,7 @@
 - `use` 导入与引用风格保持
 - 按项目环境自动选择规则集
 
-详细规则、限制和 Roadmap 见 [`plan/PHALCON4_TO_5_PLAN.md`](plan/PHALCON4_TO_5_PLAN.md)。
+详细规则、限制和 Roadmap 见 [`plan/PHALCON3_TO_4_PLAN.md`](plan/PHALCON3_TO_4_PLAN.md) 与 [`plan/PHALCON4_TO_5_PLAN.md`](plan/PHALCON4_TO_5_PLAN.md)。
 
 ## 运行环境建议
 
@@ -44,9 +44,11 @@ composer require --dev xuwenxiong/rector-phalcon
 
 | 常量 | 作用 |
 |---|---|
-| `PhalconSetList::UP_PHALCON_4_TO_5` | 显式加载当前已实现的 Phalcon 4 → 5 规则集，指向 `src/Phalcon5/Config/Set/phalcon50.php` |
-| `PhalconSetList::UP_TO_PHALCON_50` | `UP_PHALCON_4_TO_5` 的别名，采用 Rector 扩展常见的 `UP_TO_*` 命名风格 |
-| `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择单个升级阶段；当前探测到目标 Phalcon 5 时加载 4 → 5 规则集，其他情况不加载 |
+| `PhalconSetList::UP_PHALCON_3_TO_4` | 显式加载 Phalcon 3 → 4 基础规则集，指向 `src/Phalcon4/Config/Set/phalcon40.php` |
+| `PhalconSetList::UP_PHALCON_4_TO_5` | 显式加载 Phalcon 4 → 5 规则集，指向 `src/Phalcon5/Config/Set/phalcon50.php` |
+| `PhalconSetList::UP_TO_PHALCON_40` | `UP_PHALCON_3_TO_4` 的别名，采用 `UP_TO_*` 命名风格 |
+| `PhalconSetList::UP_TO_PHALCON_50` | `UP_PHALCON_4_TO_5` 的别名，采用 `UP_TO_*` 命名风格 |
+| `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择单个升级阶段；目标 Phalcon 4 加载 3 → 4，目标 Phalcon 5 加载 4 → 5 |
 
 ### 方式一：SetList 常量配置
 
@@ -81,7 +83,7 @@ return RectorConfig::configure()
     ]);
 ```
 
-当前会探测 `phalcon/ide-stubs` 或 `phalcon` 扩展版本。探测到目标 Phalcon 5 时加载 4 → 5 规则集；探测不到或暂无对应规则集时不加载。
+当前会探测 `phalcon/ide-stubs` 或 `phalcon` 扩展版本。探测到目标 Phalcon 4 时加载 3 → 4 规则集；目标 Phalcon 5 时加载 4 → 5 规则集；其他情况不加载。
 
 两种方式不要同时叠加使用，否则可能出现意外结果。设计细节见 [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)。
 
@@ -107,7 +109,7 @@ vendor/bin/rector process src
 
 - [`plan/DIRECTORY_STRUCTURE_PLAN.md`](plan/DIRECTORY_STRUCTURE_PLAN.md)：目录结构与命名空间
 - [`plan/PHALCON4_TO_5_PLAN.md`](plan/PHALCON4_TO_5_PLAN.md)：4 → 5 规则与 Roadmap
-- [`plan/PHALCON3_TO_4_PLAN.md`](plan/PHALCON3_TO_4_PLAN.md)：3 → 4 规划
+- [`plan/PHALCON3_TO_4_PLAN.md`](plan/PHALCON3_TO_4_PLAN.md)：3 → 4 规则与 Roadmap
 - [`plan/PHALCON3_TO_5_PLAN.md`](plan/PHALCON3_TO_5_PLAN.md)：3 → 5 直接升级规划
 - [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)：自动选择规则集
 - [`plan/EXTENSION_INSTALLER_PLAN.md`](plan/EXTENSION_INSTALLER_PLAN.md)：为什么不使用自动加载

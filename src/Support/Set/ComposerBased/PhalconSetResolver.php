@@ -15,8 +15,7 @@ final class PhalconSetResolver
     }
 
     /**
-     * The detected version is the target Phalcon version. Currently only
-     * Phalcon 5 has an implemented rule set (Phalcon 4 -> 5).
+     * The detected version is the target Phalcon version.
      *
      * @return list<string>
      */
@@ -25,6 +24,7 @@ final class PhalconSetResolver
         $version = $this->versionResolver->resolve();
 
         return match ($version) {
+            PhalconVersion::V4 => [PhalconSetList::UP_PHALCON_3_TO_4],
             PhalconVersion::V5 => [PhalconSetList::UP_PHALCON_4_TO_5],
             default => [],
         };

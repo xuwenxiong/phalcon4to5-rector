@@ -12,18 +12,18 @@ use RectorPhalcon\Support\ValueObject\PhalconVersion;
 
 final class PhalconSetResolverTest extends TestCase
 {
+    public function testResolvesPhalcon4To3To4Set(): void
+    {
+        $resolver = $this->createSetResolver(PhalconVersion::V4);
+
+        $this->assertSame([PhalconSetList::UP_PHALCON_3_TO_4], $resolver->resolve());
+    }
+
     public function testResolvesPhalcon5ToBaselineSet(): void
     {
         $resolver = $this->createSetResolver(PhalconVersion::V5);
 
         $this->assertSame([PhalconSetList::UP_PHALCON_4_TO_5], $resolver->resolve());
-    }
-
-    public function testPhalcon4IsNoOpUntilRuleSetExists(): void
-    {
-        $resolver = $this->createSetResolver(PhalconVersion::V4);
-
-        $this->assertSame([], $resolver->resolve());
     }
 
     public function testPhalcon3And6AreNoOp(): void

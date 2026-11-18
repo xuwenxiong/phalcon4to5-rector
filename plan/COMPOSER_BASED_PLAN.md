@@ -128,15 +128,18 @@ src/Support/Set/ComposerBased/config.php
 
 | 探测到的目标版本 | 自动选择的规则集 |
 |---|---|
-| Phalcon 4 | 未来的 `Phalcon4SetList::BASELINE`，用于 3 → 4 |
-| Phalcon 5 | `Phalcon5SetList::BASELINE`，用于 4 → 5 |
-| Phalcon 6 | 未来的 `Phalcon6SetList::BASELINE`，用于 5 → 6 |
+| Phalcon 4 | `PhalconSetList::UP_PHALCON_3_TO_4`，用于 3 → 4 |
+| Phalcon 5 | `PhalconSetList::UP_PHALCON_4_TO_5`，用于 4 → 5 |
+| Phalcon 6 | 未来的 `UP_PHALCON_5_TO_6`，当前 no-op |
 | 探测不到 | no-op，不注册 Phalcon 规则 |
 | Phalcon 3 目标为 5 | 不自动合并两个 set，提示使用 `upgrade:3-to-5` 分阶段 CLI |
 
-当前分支只实现了 Phalcon 5，因此当前阶段的行为应限制为：
+当前已实现目标 Phalcon 4 和 Phalcon 5，因此当前行为为：
 
 ```text
+探测到目标 Phalcon 4
+  └─ 加载 PhalconSetList::UP_PHALCON_3_TO_4
+
 探测到目标 Phalcon 5
   └─ 加载 PhalconSetList::UP_PHALCON_4_TO_5
 
@@ -271,7 +274,7 @@ src/Support/Set/ComposerBased/PhalconSetResolver.php
 
 当前实现：
 
-> 探测到目标 Phalcon 5 时选择 `UP_PHALCON_4_TO_5`；其他当前未实现阶段返回空数组，不注册 Phalcon 规则。
+> 探测到目标 Phalcon 4 时选择 `UP_PHALCON_3_TO_4`；探测到目标 Phalcon 5 时选择 `UP_PHALCON_4_TO_5`；其他阶段返回空数组，不注册 Phalcon 规则。
 
 ### 6.4 Composer-based 配置文件
 

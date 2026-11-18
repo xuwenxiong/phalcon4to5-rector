@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace RectorPhalcon\Set;
 
+use RectorPhalcon\Phalcon4\Set\Phalcon4SetList;
 use RectorPhalcon\Phalcon5\Set\Phalcon5SetList;
 
 /**
@@ -14,7 +15,17 @@ final class PhalconSetList
     /**
      * @var string
      */
+    public const UP_PHALCON_3_TO_4 = Phalcon4SetList::BASELINE;
+
+    /**
+     * @var string
+     */
     public const UP_PHALCON_4_TO_5 = Phalcon5SetList::BASELINE;
+
+    /**
+     * @var string
+     */
+    public const UP_TO_PHALCON_40 = self::UP_PHALCON_3_TO_4;
 
     /**
      * Alias in the `UP_TO_*` style used by Rector extension set lists.

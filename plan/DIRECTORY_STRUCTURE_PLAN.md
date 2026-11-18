@@ -172,7 +172,7 @@ project-root/
 │   │       ├── Phalcon50Set/
 │   │       └── Rector/
 │   │
-│   └── Phalcon4/                              # 未来或已规划的 3→4 阶段
+│   └── Phalcon4/                              # 已实施的 3→4 基础阶段
 │       ├── Config/
 │       │   └── Set/
 │       │       └── phalcon40.php
@@ -255,7 +255,7 @@ PhalconSetList::UP_TO_PHALCON_50
 PhalconSetList::COMPOSER_BASED
 ```
 
-当前分支只实现 `UP_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
+当前已实现 `UP_PHALCON_3_TO_4`、`UP_PHALCON_4_TO_5` 及对应 `UP_TO_*` 别名；其他常量随对应阶段实现再补。
 
 ### 5.2 版本内部 SetList
 

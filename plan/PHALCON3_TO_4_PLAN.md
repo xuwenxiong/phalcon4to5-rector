@@ -1,18 +1,18 @@
 # Phalcon 3 → 4 自动升级支持规划
 
-> 状态：规划稿。本文只描述设计与实施顺序，不包含当前分支代码改动。
+> 状态：P0 已实施并迁移到当前目录结构；P1/P2 仍为规划。
 >
-> 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准；文中保留的版本脉络和实现细节作为历史规划记录。
+> 当前项目：`xuwenxiong/rector-phalcon`，已支持 Phalcon 4 → 5 和 Phalcon 3 → 4 基础升级。
 >
-> 当前项目：`xuwenxiong/rector-phalcon`，已支持 Phalcon 4 → 5（规则集 `src/Phalcon5/Config/Set/phalcon50.php`）。
+> 已实现：类/命名空间重命名、`use` 导入改写、已移除类 TODO 提示，规则集入口为 `src/Phalcon4/Config/Set/phalcon40.php`。
 >
-> 目标：在同一项目中增加 Phalcon 3 → 4 自动升级能力。
+> 目标：继续在同一项目中完善 Phalcon 3 → 4 自动升级能力。
 
 ### 规则集命名约定
 
 `src/Phalcon5/Config/Set/phalcon50.php` 中的 `50` 表示“目标 Phalcon 5.0 基线”，即从 Phalcon 4.x 升级到 Phalcon 5.x 的基础规则集，不是只支持 5.0.0，也不是 50.x。当前规则集已验证到 Phalcon 5.23.0。后续若 Phalcon 5.x 小版本引入破坏性变更，将采用附加规则集（如 `phalcon513.php`），不重命名基础规则集。
 
-同理，规划中的 `src/Phalcon4/Config/Set/phalcon40.php` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
+同理，`src/Phalcon4/Config/Set/phalcon40.php` 中的 `40` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
 
 本包不使用 `extra.rector.includes` 自动加载规则集，避免多阶段规则被无条件同时启用。
 
@@ -82,7 +82,7 @@ rector 启动
 
 核心原则：**机械安全的高置信改写自动做；语义变化只提示，不猜业务意图。**
 
-### P0：高置信、机械安全，优先做
+### P0：高置信、机械安全（已实施）
 
 | 类型 | 例子 | 处理方式 |
 |---|---|---|

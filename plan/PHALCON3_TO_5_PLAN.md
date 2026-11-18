@@ -5,7 +5,7 @@
 > 当前基础：
 >
 > - 当前分支已实现 Phalcon 4 → 5：`src/Phalcon5/Config/Set/phalcon50.php`
-> - Phalcon 3 → 4 仍在规划中，详见 `plan/PHALCON3_TO_4_PLAN.md`
+> - Phalcon 3 → 4 基础规则已实现，详见 `plan/PHALCON3_TO_4_PLAN.md`
 > - 规则集不通过 extension-installer 自动加载，由用户显式选择
 >
 > 目标：等 3 → 4 能力落地后，提供一个“直接升级”体验，让用户可以用一个入口/一条命令完成 Phalcon 3.x → 5.x 升级。
@@ -339,7 +339,7 @@ CI 至少分两个 job：
 
 | 规则 | 处理方式 |
 |---|---|
-| `Phalcon4ClassRenames` + `RenameClassRector` | 阶段 1 使用 |
+| `src/Phalcon4/ClassRenames.php` + `RenameClassRector` | 阶段 1 使用 |
 | `Phalcon4` 的 `RenameUseImportsRector` | 阶段 1 使用 |
 | `Phalcon4` 的 `RemovedClassUsageHintRector` | 阶段 1 使用 |
 | `Phalcon5` 全套规则 | 阶段 2 使用 |
@@ -480,7 +480,7 @@ Phalcon35ClassRenames = resolve3to4(v3Class) → resolve4to5(result)
 ## 十二、关键文件清单（预计）
 
 ```text
-src/Phalcon4/Config/Set/phalcon40.php                         # 阶段 1 显式加载的目标 set（规划中）
+src/Phalcon4/Config/Set/phalcon40.php                         # 阶段 1 显式加载的目标 set
 bin/rector-phalcon                                # 新增 CLI wrapper
 composer.json                                     # bin + RectorPhalcon\Upgrade\ PSR-4
 src/Upgrade/...                                   # wrapper 实现
@@ -505,7 +505,7 @@ plan/PHALCON4_TO_5_PLAN.md                         # 标注 direct-upgrade 复�
 
 理由：
 
-- 现在 3 → 4 仍在规划中，直接升级的完整度受其实现进度限制。
+- 现在 3 → 4 只完成 P0，直接升级的完整度仍受 P1/P2 实现进度限制。
 - 显式阶段隔离是所有后续方案的基础。
 - 集成 fixture 能提前暴露两阶段真实交互问题。
 - CLI wrapper 是可玩性提升，不是正确性前提。

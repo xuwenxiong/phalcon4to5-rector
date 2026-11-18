@@ -41,11 +41,24 @@ final class ComposerBasedConfigTest extends TestCase
         );
     }
 
-    public function testUnsupportedVersionLoadsNoSet(): void
+    public function testDetectedPhalcon4Loads3To4Set(): void
     {
         SimpleParameterProvider::setParameter(Option::REGISTERED_RECTOR_SETS, []);
 
         $configure = (new ComposerBasedConfigFactory())->create($this->createSetResolver(PhalconVersion::V4));
+        $configure(new RectorConfig());
+
+        $this->assertContains(
+            PhalconSetList::UP_PHALCON_3_TO_4,
+            SimpleParameterProvider::provideArrayParameter(Option::REGISTERED_RECTOR_SETS)
+        );
+    }
+
+    public function testUnsupportedVersionLoadsNoSet(): void
+    {
+        SimpleParameterProvider::setParameter(Option::REGISTERED_RECTOR_SETS, []);
+
+        $configure = (new ComposerBasedConfigFactory())->create($this->createSetResolver(PhalconVersion::V6));
         $configure(new RectorConfig());
 
         $this->assertSame([], SimpleParameterProvider::provideArrayParameter(Option::REGISTERED_RECTOR_SETS));

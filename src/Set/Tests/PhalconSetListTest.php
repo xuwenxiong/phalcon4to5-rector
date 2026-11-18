@@ -9,14 +9,21 @@ use RectorPhalcon\Set\PhalconSetList;
 
 final class PhalconSetListTest extends TestCase
 {
+    public function testUpPhalcon3To4PointsToExistingConfig(): void
+    {
+        $this->assertFileExists(PhalconSetList::UP_PHALCON_3_TO_4);
+        $this->assertSame('phalcon40.php', basename(PhalconSetList::UP_PHALCON_3_TO_4));
+    }
+
     public function testUpPhalcon4To5PointsToExistingConfig(): void
     {
         $this->assertFileExists(PhalconSetList::UP_PHALCON_4_TO_5);
         $this->assertSame('phalcon50.php', basename(PhalconSetList::UP_PHALCON_4_TO_5));
     }
 
-    public function testUpToAliasKeepsSingleSource(): void
+    public function testUpToAliasesKeepSingleSource(): void
     {
+        $this->assertSame(PhalconSetList::UP_PHALCON_3_TO_4, PhalconSetList::UP_TO_PHALCON_40);
         $this->assertSame(PhalconSetList::UP_PHALCON_4_TO_5, PhalconSetList::UP_TO_PHALCON_50);
     }
 
