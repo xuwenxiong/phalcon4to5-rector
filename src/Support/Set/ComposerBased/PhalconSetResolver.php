@@ -15,15 +15,18 @@ final class PhalconSetResolver
     }
 
     /**
+     * The detected version is the target Phalcon version. Currently only
+     * Phalcon 5 has an implemented rule set (Phalcon 4 -> 5).
+     *
      * @return list<string>
      */
     public function resolve(): array
     {
         $version = $this->versionResolver->resolve();
 
-        // Phalcon 3 -> 4 will be added with the Phalcon4 rule set.
-        return $version === PhalconVersion::V4
-            ? [PhalconSetList::FROM_PHALCON_4_TO_5]
-            : [];
+        return match ($version) {
+            PhalconVersion::V5 => [PhalconSetList::FROM_PHALCON_4_TO_5],
+            default => [],
+        };
     }
 }

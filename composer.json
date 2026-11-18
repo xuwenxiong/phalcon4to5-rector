@@ -28,7 +28,9 @@
     },
     "autoload-dev": {
         "psr-4": {
-            "RectorPhalcon\\Phalcon5\\Tests\\": "src/Phalcon5/Tests"
+            "RectorPhalcon\\Phalcon5\\Tests\\": "src/Phalcon5/Tests",
+            "RectorPhalcon\\Set\\Tests\\": "src/Set/Tests",
+            "RectorPhalcon\\Support\\Tests\\": "src/Support/Tests"
         }
     },
     "extra": {

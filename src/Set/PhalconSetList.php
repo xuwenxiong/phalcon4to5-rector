@@ -25,4 +25,12 @@ final class PhalconSetList
      * @var string
      */
     public const UP_TO_PHALCON_50 = self::FROM_PHALCON_4_TO_5;
+
+    /**
+     * Detect the target Phalcon version from the project environment and
+     * select the matching single-stage upgrade set.
+     *
+     * @var string
+     */
+    public const COMPOSER_BASED = __DIR__ . '/../Support/Set/ComposerBased/config.php';
 }

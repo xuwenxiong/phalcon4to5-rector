@@ -70,6 +70,22 @@ return RectorConfig::configure()
 
 如果已经使用方式一的自动加载，不要在 `withSets()` 中重复添加同一个常量。
 
+也可以让本包根据项目环境自动选择规则集：
+
+```php
+return RectorConfig::configure()
+    ->withPaths([
+        __DIR__ . '/src',
+    ])
+    ->withSets([
+        PhalconSetList::COMPOSER_BASED,
+    ]);
+```
+
+当前会优先探测 `phalcon/ide-stubs` 版本，再回退到 `phalcon` PHP 扩展版本；探测到目标 Phalcon 5 时加载 `FROM_PHALCON_4_TO_5`，探测不到或目标版本暂无规则集时不加载 Phalcon 规则。它只选择单个升级阶段，不会把多个阶段的规则集合并在一次 Rector 运行中。
+
+使用 `COMPOSER_BASED` 时同样不要和方式一的自动加载重复叠加。详细设计见 `plan/COMPOSER_BASED_PLAN.md`。
+
 ### 运行
 
 先预览变更，确认后再应用：
@@ -338,7 +354,12 @@ throw new \Exception('boom');
     │           └── AbstractRemovedClassUsageHintRector.php# 已移除类 TODO 提示的版本无关基类
     │
     ├── Support/
-    │   ├── Set/ComposerBased/                             # Composer-based 版本探测与规则集选择骨架
+    │   ├── Set/ComposerBased/                             # Composer-based 版本探测、规则集选择与配置入口
+    │   │   ├── config.php                                 # PhalconSetList::COMPOSER_BASED 指向的配置
+    │   │   ├── ComposerBasedConfigFactory.php             # 可注入解析器的配置工厂
+    │   │   ├── PhalconVersionResolver.php                 # Composer/扩展版本探测
+    │   │   ├── PhalconSetResolver.php                     # 主版本到规则集映射
+    │   │   └── Tests/                                     # Composer-based 单测与集成测试
     │   └── ValueObject/PhalconVersion.php                 # Phalcon 主版本值对象
     │
     ├── Upgrade/                                           # 跨版本直接升级编排（如 3→5）
@@ -412,7 +433,7 @@ Set-Location "d:\opt\htdocs\rector-phalcon"
 - [x] 抽象规则基类放在 `src/Base/`，通用支持代码放在 `src/Support/`
 - [x] 公共 SetList 常量入口 `RectorPhalcon\Set\PhalconSetList`，后续升级阶段共用同一入口
 - [x] 当前已实现规则集通过 `extra.rector.includes` 自动加载
-- [ ] 按目标版本自动选择规则集的 Composer-based 配置接入
+- [x] 按目标版本自动选择规则集的 Composer-based 配置接入（`PhalconSetList::COMPOSER_BASED`）
 - [ ] Phalcon 3 → 4、Phalcon 3 → 5 各阶段规则集接入公共入口
 
 ### 当前已实现：Phalcon 4 → 5

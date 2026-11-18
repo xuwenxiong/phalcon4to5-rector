@@ -19,4 +19,10 @@ final class PhalconSetListTest extends TestCase
     {
         $this->assertSame(PhalconSetList::FROM_PHALCON_4_TO_5, PhalconSetList::UP_TO_PHALCON_50);
     }
+
+    public function testComposerBasedPointsToExistingConfig(): void
+    {
+        $this->assertFileExists(PhalconSetList::COMPOSER_BASED);
+        $this->assertSame('config.php', basename(PhalconSetList::COMPOSER_BASED));
+    }
 }
