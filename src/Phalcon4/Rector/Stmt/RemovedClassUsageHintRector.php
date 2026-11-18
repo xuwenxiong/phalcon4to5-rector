@@ -40,7 +40,6 @@ final class RemovedClassUsageHintRector extends AbstractRemovedClassUsageHintRec
         'phalcon\queue\beanstalk' => 'was removed in Phalcon v4 - migrate to an external queue implementation manually',
         'phalcon\queue\beanstalk\exception' => 'was removed in Phalcon v4 - migrate to an external queue implementation manually',
         'phalcon\queue\beanstalk\job' => 'was removed in Phalcon v4 - migrate to an external queue implementation manually',
-        'phalcon\session\adapter\memcache' => 'was removed in Phalcon v4 - choose another session adapter manually',
         'phalcon\translate' => 'was removed in Phalcon v4 - migrate to the Translate component class API manually',
     ];
 

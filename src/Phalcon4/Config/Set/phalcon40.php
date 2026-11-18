@@ -10,6 +10,7 @@ use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\LoggerMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
+use RectorPhalcon\Phalcon4\Rector\Stmt\SessionMigrationHintRector;
 use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\ClassConstFetch\RenameClassConstFetchRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
@@ -30,6 +31,7 @@ return static function (RectorConfig $rectorConfig): void {
         RemovedClassUsageHintRector::class,
         CacheMigrationHintRector::class,
         LoggerMigrationHintRector::class,
+        SessionMigrationHintRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
         RenameCliConsoleAddModulesRector::class,
