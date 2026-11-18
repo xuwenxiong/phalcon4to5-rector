@@ -314,7 +314,7 @@ src/Upgrade/Tests/
 
 当前 `composer.lock` 固定的是 `phalcon/ide-stubs: ^5.0`。
 
-这对当前 P0 的 3 → 4 类重命名没问题，因为它是配置驱动、不依赖反射。但后续如果启用 3 → 4 方法重命名，就必须有 `^4.0` stubs。
+3 → 4 类重命名是配置驱动、不依赖反射；但当前 P1 已启用 ACL 方法重命名，因此 `phalcon40` 阶段需要 `^4.0` stubs。
 
 CI 至少分两个 job：
 
@@ -326,8 +326,8 @@ CI 至少分两个 job：
 
 `direct-35` 可以有两档：
 
-1. 当前 P0 版：只用类映射，不需要切换 stubs。
-2. 完整版：阶段 1 用 `^4.0`，阶段 2 用 `^5.0`。
+1. 基础 P0 版：只用类映射，不需要切换 stubs。
+2. 当前版：阶段 1 用 `^4.0`，阶段 2 用 `^5.0`。
 
 用户侧执行直接升级时也建议按阶段切换：先安装 `phalcon/ide-stubs:^4.0` 完成 3 → 4，再切换到 `^5.0` 执行 4 → 5。
 
@@ -344,6 +344,8 @@ CI 至少分两个 job：
 | `src/Phalcon4/ClassRenames.php` + `RenameClassRector` | 阶段 1 使用 |
 | `Phalcon4` 的 `RenameUseImportsRector` | 阶段 1 使用 |
 | `Phalcon4` 的 `RemovedClassUsageHintRector` | 阶段 1 使用 |
+| `Phalcon4` 的 ACL / Paginator `RenameMethodRector` | 阶段 1 使用，需 `^4.0` stubs |
+| `Phalcon4` 的 `RenamePaginatorBeforePropertyRector` | 阶段 1 使用 |
 | `Phalcon5` 全套规则 | 阶段 2 使用 |
 
 ### 8.2 需要额外验证的规则
@@ -353,7 +355,7 @@ CI 至少分两个 job：
 | `TextAndHelperToSupportHelperRector` | Phalcon 3 只有 `Phalcon\Text`，`Phalcon\Helper\*` 是 v4 才出现；3 → 5 覆盖率取决于 3 → 4 P1 是否实现 `Text → Helper\Str` |
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 的 Cache 是架构级重构，P0 只做类重命名；此 v5 规则会看到 v4 形态后才可靠 |
-| 方法重命名 | 3 → 4 方法重命名尚未实现；若未实现，直接升级会漏掉部分 v3 → v4 方法变更 |
+| 方法重命名 | 3 → 4 已实现 ACL、Paginator 子集；CLI 等方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
 
 ### 8.3 不应在同一次运行中混用
 

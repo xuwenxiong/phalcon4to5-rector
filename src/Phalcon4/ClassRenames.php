@@ -25,6 +25,7 @@ final class ClassRenames
     public const MAP = [
         // ACL
         'Phalcon\Acl\Adapter' => 'Phalcon\Acl\Adapter\AbstractAdapter',
+        'Phalcon\Acl\AdapterInterface' => 'Phalcon\Acl\Adapter\AdapterInterface',
         'Phalcon\Acl\Resource' => 'Phalcon\Acl\Component',
         'Phalcon\Acl\ResourceInterface' => 'Phalcon\Acl\ComponentInterface',
         'Phalcon\Acl\ResourceAware' => 'Phalcon\Acl\ComponentAware',
@@ -101,6 +102,7 @@ final class ClassRenames
 
         // Paginator
         'Phalcon\Paginator\Adapter' => 'Phalcon\Paginator\Adapter\AbstractAdapter',
+        'Phalcon\Paginator\AdapterInterface' => 'Phalcon\Paginator\Adapter\AdapterInterface',
         'Phalcon\Paginator\Factory' => 'Phalcon\Paginator\PaginatorFactory',
 
         // Session

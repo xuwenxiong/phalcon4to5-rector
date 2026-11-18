@@ -3,10 +3,15 @@
 declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
+use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
+use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
 use Rector\Renaming\Rector\Name\RenameClassRector;
+use Rector\Renaming\Rector\PropertyFetch\RenamePropertyRector;
+use Rector\Renaming\ValueObject\MethodCallRename;
+use Rector\Renaming\ValueObject\RenameProperty;
 
 return static function (RectorConfig $rectorConfig): void {
     // ---------------------------------------------------------------------
@@ -17,6 +22,7 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->rules([
         RemovedClassUsageHintRector::class,
         RenameUseImportsRector::class,
+        RenamePaginatorBeforePropertyRector::class,
     ]);
 
     // ---------------------------------------------------------------------
@@ -26,7 +32,44 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->ruleWithConfiguration(RenameClassRector::class, ClassRenames::MAP);
 
     // ---------------------------------------------------------------------
-    // 3. `use` imports — Phalcon classes only
+    // 3. Method renames
+    // ---------------------------------------------------------------------
+    // The configured classes are Phalcon 4 names: RenameClassRector above has
+    // already converted Phalcon 3 references to their v4 equivalents.
+    $rectorConfig->ruleWithConfiguration(RenameMethodRector::class, [
+        // ACL
+        new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'isResource', 'isComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'addResource', 'addComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'getResources', 'getComponents'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'getActiveResource', 'getActiveComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AdapterInterface', 'isResource', 'isComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AdapterInterface', 'addResource', 'addComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AdapterInterface', 'getResources', 'getComponents'),
+        new MethodCallRename('Phalcon\Acl\Adapter\AdapterInterface', 'getActiveResource', 'getActiveComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\Memory', 'isResource', 'isComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\Memory', 'addResource', 'addComponent'),
+        new MethodCallRename('Phalcon\Acl\Adapter\Memory', 'getResources', 'getComponents'),
+        new MethodCallRename('Phalcon\Acl\Adapter\Memory', 'getActiveResource', 'getActiveComponent'),
+
+        // Paginator
+        new MethodCallRename('Phalcon\Paginator\Adapter\AbstractAdapter', 'getPaginate', 'paginate'),
+        new MethodCallRename('Phalcon\Paginator\Adapter\AdapterInterface', 'getPaginate', 'paginate'),
+        new MethodCallRename('Phalcon\Paginator\Adapter\Model', 'getPaginate', 'paginate'),
+        new MethodCallRename('Phalcon\Paginator\Adapter\NativeArray', 'getPaginate', 'paginate'),
+        new MethodCallRename('Phalcon\Paginator\Adapter\QueryBuilder', 'getPaginate', 'paginate'),
+    ]);
+
+    // ---------------------------------------------------------------------
+    // 4. Repository property renames
+    // ---------------------------------------------------------------------
+    $rectorConfig->ruleWithConfiguration(RenamePropertyRector::class, [
+        new RenameProperty('Phalcon\Paginator\Repository', 'before', 'previous'),
+        new RenameProperty('Phalcon\Paginator\RepositoryInterface', 'before', 'previous'),
+        new RenameProperty('Phalcon\Contracts\Paginator\Repository', 'before', 'previous'),
+    ]);
+
+    // ---------------------------------------------------------------------
+    // 5. `use` imports — Phalcon classes only
     // ---------------------------------------------------------------------
     // Keep the same scoped-import policy as phalcon50.php: non-Phalcon FQCNs
     // are never shortened globally.

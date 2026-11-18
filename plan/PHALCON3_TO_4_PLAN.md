@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1 的 stubs CI 已实施，其余 P1/P2 持续迭代中。
+> 状态：P0 已实施，P1 的 stubs CI、ACL 方法重命名、Paginator 方法与属性重命名已实施，其余 P1/P2 持续迭代中。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -173,11 +173,15 @@ RenameUseImportsRector
 
 ### 3.3 方法重命名
 
-当前 P0 未启用方法重命名。
+P1 已启用 ACL 与 Paginator 的确定性重命名，使用 Rector 内置 `RenameMethodRector` + `MethodCallRename` 配置。
 
-P1 计划使用 Rector 内置 `RenameMethodRector` + `MethodCallRename` 配置，集中处理确定性的方法名变化，例如 ACL、Paginator、CLI 相关方法。
+配置中的类名使用 Phalcon 4 名称，因为 `RenameClassRector` 先于方法规则执行，已经把 Phalcon 3 引用改写成 v4 等价类名。ACL 覆盖 `AbstractAdapter`、`AdapterInterface` 和 `Memory`；Paginator 覆盖 `AbstractAdapter`、`AdapterInterface`、`Model`、`NativeArray` 和 `QueryBuilder`。
 
-引入前需要先准备 `phalcon/ide-stubs:^4.0` 测试矩阵。
+`Phalcon\Paginator\AdapterInterface` 也加入了 `ClassRenames::MAP`，统一改写为 `Phalcon\Paginator\Adapter\AdapterInterface`。
+
+Paginator 结果对象的 `$before` → `$previous` 由自定义规则 `RenamePaginatorBeforePropertyRector` 处理：它记录同一函数作用域内由 Paginator `getPaginate()` / `paginate()` 赋值得到的变量名，只改写这些变量上的 `->before`，避免误伤业务对象的同名字段。
+
+CLI 等其他方法重命名仍在后续 P1 中实施。
 
 ### 3.4 导入策略
 
@@ -208,7 +212,7 @@ $rectorConfig->importNames(false, false);
 
 | 组件 | 示例映射 |
 |---|---|
-| ACL | `Phalcon\Acl\Resource` → `Phalcon\Acl\Component` |
+| ACL | `Phalcon\Acl\Resource` → `Phalcon\Acl\Component`；`Phalcon\Acl\AdapterInterface` → `Phalcon\Acl\Adapter\AdapterInterface` |
 | Annotations | `Phalcon\Annotations\Adapter\Files` → `Phalcon\Annotations\Adapter\Stream` |
 | Application | `Phalcon\Application` → `Phalcon\Application\AbstractApplication` |
 | Assets | `Phalcon\Assets\Resource` → `Phalcon\Assets\Asset` |
@@ -242,16 +246,21 @@ Phalcon\Mvc\Model\Validator\Inclusionin
 
 ### 4.2 方法重命名
 
-当前 P0 未实现。
+P1 已实现 ACL 与 Paginator 子集：
 
-P1 计划覆盖：
+| 类/组件 | 旧方法/属性 | 新方法/属性 | 状态 |
+|---|---|---|---|
+| ACL Adapter | `isResource()` | `isComponent()` | 已实现 |
+| ACL Adapter | `addResource()` | `addComponent()` | 已实现 |
+| ACL Adapter | `getResources()` | `getComponents()` | 已实现 |
+| ACL Adapter | `getActiveResource()` | `getActiveComponent()` | 已实现 |
+| Paginator Adapter | `getPaginate()` | `paginate()` | 已实现 |
+| Paginator Repository | `$before` | `$previous` | 已实现 |
+| CLI Console | `addModules()` | `registerModules()` | 待实施 |
 
-| 类/组件 | 旧方法 | 新方法 |
-|---|---|---|
-| ACL Adapter/Component/Role | `isResource()` / `addResource()` / `getResources()` | `isComponent()` / `addComponent()` / `getComponents()` |
-| Paginator | `getPaginate()` | `paginate()` |
-| Paginator | `$before` | `$previous` |
-| CLI Console | `addModules()` | `registerModules()` |
+方法配置目标类包括 `Phalcon\Acl\Adapter\AbstractAdapter`、`Phalcon\Acl\Adapter\AdapterInterface`、`Phalcon\Acl\Adapter\Memory`、`Phalcon\Paginator\Adapter\AbstractAdapter`、`Phalcon\Paginator\Adapter\AdapterInterface` 及具体 Paginator 适配器，用于覆盖抽象类、接口和具体实现上的调用。
+
+`$before` → `$previous` 使用自定义 `RenamePaginatorBeforePropertyRector`，并保留 `RenamePropertyRector` 对已能推断为 Phalcon 4 Repository 类型的调用做补充处理。
 
 依赖说明：
 
@@ -360,16 +369,19 @@ src/Phalcon4/Tests/
 │   ├── config/configured_rule.php
 │   └── Fixture/*.php.inc
 └── Rector/
+    ├── PropertyFetch/
+    │   └── RenamePaginatorBeforePropertyRector/
     └── Stmt/
         ├── RenameUseImportsRector/
         └── RemovedClassUsageHintRector/
 ```
 
-当前 P0 fixture：
+当前 fixture：
 
-- `Phalcon40Set`：4 个 `.php.inc`
+- `Phalcon40Set`：6 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法、属性和无关类跳过。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RemovedClassUsageHintRector`：2 个 `.php.inc`
+- `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
 
 ### 5.2 测试类型
 
@@ -383,7 +395,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、ACL/Paginator 方法重命名、Paginator 属性重命名、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -492,23 +504,22 @@ src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 
 ### 6.7 反射依赖最小化
 
-当前 P0 不用 `RenameMethodRector`，因此不依赖 stubs 做类型解析。
+类重命名、`use` 导入改写和 TODO 提示仍然由映射表驱动，不依赖反射。
 
-P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵，用户侧也建议在该阶段前切换到该版本 stubs，以保证方法调用的类型可解析。
+ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源，不需要读取 Phalcon 4 Repository 的方法定义。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
 
 ---
 
 ## 七、已知限制
 
-1. 当前只实现 P0：类名/命名空间、`use` 导入、已移除类 TODO 提示。
-2. 方法重命名尚未实现。
-   - ACL / Paginator / CLI 等 1:1 方法变化待 P1。
+1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator 重命名子集。
+2. CLI 方法重命名尚未实现。
 3. 常量迁移尚未实现。
    - Filter、DB 常量待 P1。
 4. 结构性迁移未实现。
    - Cache、Logger、Session、Filter 只输出 TODO 或保持原样。
 5. `Phalcon\Text` → `Phalcon\Helper\Str` 尚未实现，待 P1。
-6. 当前 dev stubs 是 `^5.0`，P1 方法重命名前必须建立 `^4.0` stubs 测试矩阵。
+6. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 7. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 8. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
 9. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
@@ -540,15 +551,15 @@ P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵，用户侧
 - [x] 两个单规则测试目录及 fixture。
 - [x] 非 Phalcon 类与无关 `use` 保持原样验证。
 
-### 8.2 P1：方法与常量迁移（待实施）
+### 8.2 P1：方法与常量迁移（进行中）
 
 - [x] 建立 `phalcon/ide-stubs:^4.0` CI job。
-- [ ] ACL 方法重命名：
+- [x] ACL 方法重命名：
   - `isResource()` → `isComponent()`
   - `addResource()` → `addComponent()`
   - `getResources()` → `getComponents()`
   - `getActiveResource()` → `getActiveComponent()`
-- [ ] Paginator：
+- [x] Paginator：
   - `getPaginate()` → `paginate()`
   - `$before` → `$previous`
 - [ ] CLI：
@@ -603,8 +614,8 @@ P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵，用户侧
 
 1. 确认目标方法在 Phalcon 4 stubs 中存在。
 2. 建立或切换到 `phalcon/ide-stubs:^4.0` 测试环境。
-3. 在 `src/Phalcon4/Config/Set/phalcon40.php` 的 `RenameMethodRector` 列表增加 `MethodCallRename`。
-4. 写 fixture，覆盖正常对象调用和无法解析类型时的跳过行为。
+3. 在 `src/Phalcon4/Config/Set/phalcon40.php` 的 `RenameMethodRector` 列表增加 `MethodCallRename`，类名使用 Phalcon 4 目标名称。
+4. 写 fixture，覆盖正常对象调用、接口类型调用和无关类保持原样。
 5. 更新本文件的方法重命名表。
 
 ### 9.3 新增自定义规则
@@ -647,6 +658,8 @@ src/Phalcon4/Config/Set/phalcon40.php
   - 3 → 4 规则集入口
   - 自定义规则注册
   - RenameClassRector 配置
+  - ACL / Paginator RenameMethodRector 配置
+  - Repository RenamePropertyRector 补充配置
   - importNames(false, false)
 
 src/Phalcon4/ClassRenames.php
@@ -659,6 +672,9 @@ src/Phalcon4/Set/Phalcon4SetList.php
 src/Phalcon4/ImportShortener.php
   - 后续 P1/P2 新引入 Phalcon 类时补 use
 
+src/Phalcon4/Rector/PropertyFetch/RenamePaginatorBeforePropertyRector.php
+  - 根据分页结果赋值来源改写 $before → $previous
+
 src/Phalcon4/Rector/Stmt/RenameUseImportsRector.php
   - 继承 Base 抽象类，提供 Phalcon 3 → 4 映射
 
@@ -667,6 +683,7 @@ src/Phalcon4/Rector/Stmt/RemovedClassUsageHintRector.php
 
 src/Phalcon4/Tests/
   - Phalcon40Set/
+  - Rector/PropertyFetch/
   - Rector/Stmt/
 
 src/Base/Rector/Stmt/
