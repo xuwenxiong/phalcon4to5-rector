@@ -114,6 +114,9 @@ final class ClassRenames
         'Phalcon\Session\Adapter\Files' => 'Phalcon\Session\Adapter\Stream',
         'Phalcon\Session\Factory' => 'Phalcon\Session\Manager',
 
+        // Text
+        'Phalcon\Text' => 'Phalcon\Helper\Str',
+
         // Translate
         'Phalcon\Translate\Adapter' => 'Phalcon\Translate\Adapter\AbstractAdapter',
         'Phalcon\Translate\Factory' => 'Phalcon\Translate\TranslateFactory',

@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1 的 stubs CI、ACL/Paginator/CLI 方法重命名、Filter 与 DB 常量重命名已实施，其余 P1/P2 持续迭代中。
+> 状态：P0 已实施，P1 的 stubs CI、ACL/Paginator/CLI 方法重命名、Filter 与 DB 常量重命名、`Phalcon\Text` → `Phalcon\Helper\Str` 已实施，其余 P1/P2 持续迭代中。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -226,6 +226,7 @@ $rectorConfig->importNames(false, false);
 | MVC | `Phalcon\Mvc\Collection` → `Phalcon\Collection` |
 | Paginator | `Phalcon\Paginator\Factory` → `Phalcon\Paginator\PaginatorFactory` |
 | Session | `Phalcon\Session\Factory` → `Phalcon\Session\Manager` |
+| Text | `Phalcon\Text` → `Phalcon\Helper\Str` |
 | Translate | `Phalcon\Translate\Factory` → `Phalcon\Translate\TranslateFactory` |
 | Validation | `Phalcon\Validation\Message` → `Phalcon\Messages\Message` |
 
@@ -289,6 +290,8 @@ Phalcon 3.4 API 中的 Filter 常量名是 `FILTER_ALPHANUM`；官方升级指�
 DB 侧已复用 `ClassRenames::MAP` 中已有的 `Phalcon\Db` → `Phalcon\Db\AbstractDb`。所有 Phalcon 3.4 `Phalcon\Db::FETCH_*` 常量统一改写到 `Phalcon\Db\Enum`，常量名保持不变；清单集中在 `src/Phalcon4/DbConstants.php`。
 
 常量规则对 v3 类名引用使用 `RenameClassAndConstFetch`，对 v4 类名引用使用 `RenameClassConstFetch`，因此不依赖 `RenameClassRector` 的执行顺序。对于 DB，额外覆盖 `Phalcon\Db\AbstractDb`，防止类重命名先发生时常量遗漏。
+
+`Phalcon\Text` 迁移通过类映射实现：`Phalcon\Text::camelize()` → `Phalcon\Helper\Str::camelize()`，`Phalcon\Text::RANDOM_ALPHA` → `Phalcon\Helper\Str::RANDOM_ALPHA`。因为 Phalcon 4 的 `Phalcon\Helper\Str` 保留了这些静态方法和 `RANDOM_*` 常量，不需要额外的方法/常量改写规则；`use` 导入和内联全限定引用仍由 `RenameUseImportsRector` + `RenameClassRector` 处理。这一步也让 4 → 5 的 `TextAndHelperToSupportHelperRector` 能在直接升级的第二阶段看到正确的 Phalcon 4 形态。
 
 ### 4.4 自定义规则
 
@@ -405,7 +408,7 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：9 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作。
+- `Phalcon40Set`：10 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作，`text_to_helper_str.php.inc` 覆盖 Phalcon 3.4 `Text` 全部静态方法、`RANDOM_*` 常量与无关类跳过。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
@@ -425,7 +428,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、Paginator 属性重命名、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -542,14 +545,13 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator、CLI 重命名和 Filter / DB 常量重命名。
+1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator、CLI 重命名、Filter / DB 常量重命名和 `Phalcon\Text` → `Phalcon\Helper\Str`。
 2. 结构性迁移未实现。
    - Cache、Logger、Session、Filter 只输出 TODO 或保持原样。
-3. `Phalcon\Text` → `Phalcon\Helper\Str` 尚未实现，待 P1。
-4. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
-5. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
-6. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
-7. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
+3. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
+4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
+5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
+6. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
 
 ---
 
@@ -598,7 +600,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 - [x] DB 常量迁移到 `Phalcon\Db\Enum`：
   - 17 个 Phalcon 3.4 `FETCH_*` 常量统一改写为 `Phalcon\Db\Enum::FETCH_*`
   - 清单集中在 `src/Phalcon4/DbConstants.php`
-- [ ] `Phalcon\Text` → `Phalcon\Helper\Str`。
+- [x] `Phalcon\Text` → `Phalcon\Helper\Str`：静态方法与 `RANDOM_*` 常量由类映射统一改写。
 - [ ] 为上述规则补 fixture、规则集测试和文档更新。
 
 ### 8.3 P2：结构性迁移提示（待实施）

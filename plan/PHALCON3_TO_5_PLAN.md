@@ -353,7 +353,7 @@ CI 至少分两个 job：
 
 | 规则 | 风险 |
 |---|---|
-| `TextAndHelperToSupportHelperRector` | Phalcon 3 只有 `Phalcon\Text`，`Phalcon\Helper\*` 是 v4 才出现；3 → 5 覆盖率取决于 3 → 4 P1 是否实现 `Text → Helper\Str` |
+| `TextAndHelperToSupportHelperRector` | 3 → 4 已实现 `Phalcon\Text` → `Phalcon\Helper\Str`，第二阶段可以看到正确的 Phalcon 4 形态；仍需补充两阶段集成 fixture |
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 的 Cache 是架构级重构，P0 只做类重命名；此 v5 规则会看到 v4 形态后才可靠 |
 | 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
@@ -440,7 +440,7 @@ README 增加“方式四：Phalcon 3 → 5 直接升级（实验/推荐入口�
 
 按 `plan/PHALCON3_TO_4_PLAN.md` 继续推进：
 
-- P1：方法重命名、常量、`Text → Helper\Str`
+- P1：剩余方法重命名、结构性常量迁移后的补充规则
 - P2：Cache / Logger / Session / Filter 结构性提示
 
 每完成一项，都要补 3 → 5 集成 fixture，而不是只补 3 → 4 单规则 fixture。
