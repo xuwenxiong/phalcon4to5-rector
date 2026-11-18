@@ -60,7 +60,7 @@ return RectorConfig::configure()
 
 `PhalconSetList::UP_TO_PHALCON_50` 是 `FROM_PHALCON_4_TO_5` 的别名，保持 Rector 扩展常见的 `UP_TO_*` 命名风格。
 
-这两个常量都指向 `config/sets/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。后续 Phalcon 3 → 4 与 3 → 5 能力会在同一个公共 `PhalconSetList` 中扩展，用户无需更换入口类；3 → 5 直接升级仍建议通过后续 CLI wrapper 分阶段调用。
+这两个常量都指向 `config/sets/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。
 
 如果已经使用方式一的自动加载，不要在 `withSets()` 中重复添加同一个常量。
 
