@@ -82,9 +82,16 @@ return RectorConfig::configure()
 先预览，再应用：
 
 ```bash
+# 预览
 vendor/bin/rector process src --dry-run
+
+# 应用
 vendor/bin/rector process src
 ```
+
+其中 `src` 是示例路径，请替换为实际待升级的代码目录；也可以传入多个路径，例如 `vendor/bin/rector process src tests --dry-run`。若已在 `rector.php` 中通过 `withPaths()` 配置路径，命令行路径会覆盖该配置。
+
+更多rector命令用法见 [Rector 官方文档](https://docs.getrector.org/)。
 
 建议在新分支上执行 Rector，并通过 Git diff 审查变更。
 
