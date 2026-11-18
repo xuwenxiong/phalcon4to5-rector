@@ -30,7 +30,9 @@ composer require --dev xuwenxiong/rector-phalcon
 
 ## 使用
 
-### 自动加载（推荐）
+以下三种方式任选其一，不要同时叠加使用，否则可能出现意外结果。
+
+### 方式一：自动加载（推荐）
 
 安装 Rector 扩展自动加载器后，当前规则集会自动注册：
 
@@ -38,7 +40,7 @@ composer require --dev xuwenxiong/rector-phalcon
 composer require --dev rector/extension-installer
 ```
 
-### SetList 常量配置
+### 方式二：SetList 常量配置
 
 在 `rector.php` 中显式选择规则集：
 
@@ -59,7 +61,7 @@ return RectorConfig::configure()
     ]);
 ```
 
-### Composer-based 自动选择
+### 方式三：Composer-based 自动选择
 
 ```php
 return RectorConfig::configure()
