@@ -30,7 +30,7 @@ composer require --dev xuwenxiong/rector-phalcon
 
 ## 使用
 
-以下三种方式任选其一，不要同时叠加使用，否则可能出现意外结果。
+本包不通过 `rector/extension-installer` 自动加载规则集，以避免多版本升级阶段被无意识启用。请在 `rector.php` 中选择以下任一方式。
 
 ### 可用规则集常量
 
@@ -42,15 +42,7 @@ composer require --dev xuwenxiong/rector-phalcon
 | `PhalconSetList::UP_TO_PHALCON_50` | `UP_PHALCON_4_TO_5` 的别名，采用 Rector 扩展常见的 `UP_TO_*` 命名风格 |
 | `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择单个升级阶段；当前探测到目标 Phalcon 5 时加载 4 → 5 规则集，其他情况不加载 |
 
-### 方式一：自动加载（推荐）
-
-安装 Rector 扩展自动加载器后，当前规则集会自动注册：
-
-```bash
-composer require --dev rector/extension-installer
-```
-
-### 方式二：SetList 常量配置
+### 方式一：SetList 常量配置
 
 在 `rector.php` 中显式选择规则集：
 
@@ -71,7 +63,7 @@ return RectorConfig::configure()
     ]);
 ```
 
-### 方式三：Composer-based 自动选择
+### 方式二：Composer-based 自动选择
 
 ```php
 return RectorConfig::configure()
@@ -85,7 +77,7 @@ return RectorConfig::configure()
 
 当前会探测 `phalcon/ide-stubs` 或 `phalcon` 扩展版本。探测到目标 Phalcon 5 时加载 4 → 5 规则集；探测不到或暂无对应规则集时不加载。
 
-设计细节见 [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)。
+两种方式不要同时叠加使用，否则可能出现意外结果。设计细节见 [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)。
 
 ## 运行
 
@@ -112,7 +104,7 @@ vendor/bin/rector process src
 - [`plan/PHALCON3_TO_4_PLAN.md`](plan/PHALCON3_TO_4_PLAN.md)：3 → 4 规划
 - [`plan/PHALCON3_TO_5_PLAN.md`](plan/PHALCON3_TO_5_PLAN.md)：3 → 5 直接升级规划
 - [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)：自动选择规则集
-- [`plan/EXTENSION_INSTALLER_PLAN.md`](plan/EXTENSION_INSTALLER_PLAN.md)：自动加载原理
+- [`plan/EXTENSION_INSTALLER_PLAN.md`](plan/EXTENSION_INSTALLER_PLAN.md)：为什么不使用自动加载
 
 ## 许可
 

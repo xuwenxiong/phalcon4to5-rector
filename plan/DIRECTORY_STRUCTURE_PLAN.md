@@ -288,13 +288,13 @@ src/Phalcon4/Config/Set/phalcon40.php
 - 控制规则顺序。
 - 控制 `importNames(false, false)` 等全局策略。
 
-`composer.json` 的 `extra.rector.includes` 改为：
+`composer.json` 不配置 `extra.rector.includes`，规则集通过 `PhalconSetList` 显式选择：
 
 ```text
-src/Phalcon5/Config/Set/phalcon50.php
+PhalconSetList::UP_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
 ```
 
-由于不考虑兼容，不保留旧的根 `config/sets/phalcon50.php`。
+决策见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ### 5.4 具体规则实现
 
@@ -429,7 +429,7 @@ bin/rector-phalcon
   - `src/Phalcon4/Config/Set/phalcon40.php`
   - `src/Phalcon5/Config/Set/phalcon50.php`
 - 每阶段启动独立 Rector 进程。
-- 第一阶段设置 autoload gate 环境变量，避免 `extra.rector.includes` 注入 v5 规则。
+- 每阶段使用显式配置，只加载对应版本的 set。
 - `--dry-run` 基于临时副本，先真实执行第一阶段，再 dry-run 第二阶段。
 
 ---
@@ -532,9 +532,10 @@ autoload-dev.psr-4
   RectorPhalcon\Phalcon5\Tests\ → src/Phalcon5/Tests/
   RectorPhalcon\Phalcon4\Tests\ → src/Phalcon4/Tests/
 
-extra.rector.includes
-  src/Phalcon5/Config/Set/phalcon50.php
+no extra.rector.includes
 ```
+
+规则集通过 `PhalconSetList` 显式选择，不使用自动加载。
 
 删除所有旧 PSR-4 映射：
 
@@ -624,7 +625,7 @@ plan/PHALCON3_TO_5_PLAN.md
 5. `Phalcon4` 不继承 `Phalcon5` 的具体类。
 6. 可被继承的抽象规则基类都在 `src/Base/`；通用支持代码都在 `src/Support/`。
 7. `composer.json` 只有一个生产 PSR-4 根映射：`RectorPhalcon\ → src/`。
-8. `extra.rector.includes` 指向新 set 路径。
+8. `composer.json` 不配置 `extra.rector.includes`，规则集由 `PhalconSetList` 显式选择。
 9. `phpunit.xml` 指向新测试目录。
 10. 全量 PHPUnit 通过。
 11. `composer validate --no-check-publish` 通过。

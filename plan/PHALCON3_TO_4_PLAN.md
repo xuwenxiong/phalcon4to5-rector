@@ -14,7 +14,7 @@
 
 同理，规划中的 `src/Phalcon4/Config/Set/phalcon40.php` 表示“目标 Phalcon 4.0 基线”，负责 Phalcon 3.x → 4.x 的基础升级规则。
 
-`extra.rector.includes` 继续只登记 `phalcon50.php`，避免多套规则被 extension-installer 无条件同时加载。
+本包不使用 `extra.rector.includes` 自动加载规则集，避免多阶段规则被无条件同时启用。
 
 ---
 
@@ -25,31 +25,29 @@
 - `src/Phalcon4/Config/Set/phalcon40.php`：负责 Phalcon 3 → 4。
 - `src/Phalcon5/Config/Set/phalcon50.php`：保持现有 Phalcon 4 → 5 规则集不变。
 
-但有一个关键决策：**3 → 4 规则集不要默认加入 `composer.json` 的 `extra.rector.includes` 自动加载**。
+有一个已确定的架构决策：**所有升级阶段都不通过 `extra.rector.includes` 自动加载，用户必须在 `rector.php` 中显式选择规则集**。
 
-原因是当前自动加载链路是：
+原因是 `extension-installer` 会无条件 include `extra.rector.includes` 登记的配置：
 
 ```text
 composer install / update
-  └─ rector/extension-installer 扫描 vendor/ 下所有 composer.json
-      └─ 找出 "type": "rector-extension" 的包
-          └─ 读取 extra.rector.includes
-              └─ 汇总生成 vendor/rector/extension-installer/src/GeneratedConfig.php
+  └─ extension-installer 读取 all "type": "rector-extension" packages
+      └─ 汇总 extra.rector.includes 到 GeneratedConfig.php
 
 rector 启动
-  └─ 自动 include GeneratedConfig.php
-      └─ 加载其中登记的所有规则配置文件
+  └─ include GeneratedConfig.php 中登记的所有配置
 ```
 
-这个机制是**无条件加载**的。如果把 `phalcon40.php` 和 `phalcon50.php` 都登记进去，那么一个 Phalcon 3 项目、Phalcon 4 项目、Phalcon 5 项目都会同时跑两套规则，容易误伤。
+它不会判断项目当前使用的是 Phalcon 3、4 还是 5。多阶段规则同时启用会互相污染。
 
 典型误伤例子：现有 4 → 5 规则中有 `Phalcon\Config → Phalcon\Config\Config`，但 `Phalcon\Config` 在 Phalcon 3/4 中是正常类。如果在 Phalcon 3 项目上同时加载 4 → 5 规则，会被错误改写。
 
-因此推荐策略：
+因此当前策略：
 
-- 默认自动加载仍只保留 4 → 5。
-- 3 → 4 由用户手动在 `rector.php` 中选择 `phalcon40.php`。
-- 未来如需要“一键 3 → 5”，再提供显式入口（如 `phalcon34-to-50.php`），仍不建议默认自动加载。
+- 不启用自动加载。
+- 4 → 5 通过 `PhalconSetList::UP_PHALCON_4_TO_5` 显式选择。
+- 3 → 4 落地后通过 `PhalconSetList::UP_PHALCON_3_TO_4` 显式选择。
+- 3 → 5 使用独立的分阶段 CLI wrapper，不合并到一次 Rector 运行中。
 
 ---
 
@@ -170,39 +168,20 @@ src/
 
 ---
 
-## 五、自动加载策略
+## 五、规则集接入策略
 
-当前 `composer.json` 中：
+本包不使用 `extra.rector.includes`，不启用 `rector/extension-installer` 插件白名单。
 
-```text
-extra.rector.includes
-  └─ src/Phalcon5/Config/Set/phalcon50.php
-```
+所有规则集都通过用户显式配置生效：
 
-推荐保持不动。
+- 4 → 5：用户使用 `PhalconSetList::UP_PHALCON_4_TO_5`。
+- 3 → 4：落地后用户使用 `PhalconSetList::UP_PHALCON_3_TO_4`。
+- 3 → 5：使用独立的 CLI wrapper 分阶段执行，不合并到一次 Rector 运行中。
+- 自动选择单个阶段：用户使用 `PhalconSetList::COMPOSER_BASED`。
 
-不建议改成：
+原因：`extension-installer` 的 `GeneratedConfig.php` 只做路径聚合，不判断项目当前用的是 Phalcon 3、4 还是 5；Rector 启动时无条件 include。多版本规则同时启用会互相污染。
 
-```text
-extra.rector.includes
-  ├─ src/Phalcon4/Config/Set/phalcon40.php   # 不要默认加
-  └─ src/Phalcon5/Config/Set/phalcon50.php
-```
-
-原因：`extension-installer` 生成 `GeneratedConfig.php` 时只做聚合，不判断项目当前用的是 Phalcon 3、4 还是 5；Rector 启动时也是无条件 include。多版本规则同时启用会互相污染。
-
-推荐的用户使用方式：
-
-- 4 → 5：继续自动加载，无需改 `rector.php`。
-- 3 → 4：在 `rector.php` 中手动引用 `vendor/xuwenxiong/rector-phalcon/src/Phalcon4/Config/Set/phalcon40.php`。
-- 3 → 5：先手动跑 `phalcon40.php`，再跑默认的 `phalcon50.php`；或未来提供显式 `phalcon34-to-50.php`。
-
-如果未来一定要让两个版本都“自动”，更干净的做法是拆包：
-
-- `xuwenxiong/rector-phalcon-34`
-- `xuwenxiong/rector-phalcon-45`
-
-这样每个包只有一个 `extra.rector.includes`，插件自动加载不会冲突。但这会增加用户安装成本，建议作为后续选项，不是当前首选。
+决策详见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ---
 
@@ -273,7 +252,7 @@ README 保持简洁，只保留框架能力概述、运行环境、安装、使�
 - 本文件记录 3 → 4 的规则分层、人工检查项、验收标准和实施顺序。
 - `plan/DIRECTORY_STRUCTURE_PLAN.md` 记录目录结构与命名空间。
 - `plan/PHALCON3_TO_5_PLAN.md` 记录 3 → 5 分阶段直接升级规划。
-- `plan/EXTENSION_INSTALLER_PLAN.md` 记录自动加载原理。
+- `plan/EXTENSION_INSTALLER_PLAN.md` 记录不采用自动加载的决策与原因。
 - `plan/COMPOSER_BASED_PLAN.md` 记录按环境自动选择规则集。
 
 新增 3 → 4 能力时，需要同步：

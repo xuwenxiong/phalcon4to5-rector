@@ -58,19 +58,12 @@ return RectorConfig::configure()
 
 | 方式 | 行为 |
 |---|---|
-| `extra.rector.includes` | 固定加载当前默认规则集，当前是 `phalcon50.php` |
 | `PhalconSetList::UP_PHALCON_4_TO_5` | 用户显式指定一个阶段 |
 | `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择阶段 |
 
-当前自动加载插件是无条件加载：
+本包已移除 `extra.rector.includes`，不再通过 extension-installer 无条件加载规则集。
 
-```text
-安装本包
-  └─ extension-installer 读取 extra.rector.includes
-      └─ 固定加载 src/Phalcon5/Config/Set/phalcon50.php
-```
-
-Composer-based 配置是条件式选择：
+Composer-based 配置是显式配置中的条件式选择：
 
 ```text
 用户显式使用 PhalconSetList::COMPOSER_BASED
@@ -335,22 +328,26 @@ CLI wrapper 内部再分两阶段执行：
 阶段 2：src/Phalcon5/Config/Set/phalcon50.php
 ```
 
-### 7.3 不替代自动加载
+### 7.3 不与自动加载叠加
 
-`extra.rector.includes` 继续保留当前默认行为。
+本包已移除 `extra.rector.includes` 和 `rector/extension-installer` 插件白名单，不再无条件自动加载规则集。
 
-用户如果同时使用自动加载和：
+因此 `COMPOSER_BASED` 是显式配置方式之一，不会和默认自动加载重复。用户也不应同时叠加：
 
 ```php
-withSets([PhalconSetList::COMPOSER_BASED])
+withSets([
+    PhalconSetList::UP_PHALCON_4_TO_5,
+    PhalconSetList::COMPOSER_BASED,
+])
 ```
 
-可能重复加载同一个 set，因此文档需要明确：
+原因：
 
-- 想全自动默认升级：保留插件自动加载。
-- 想按环境选择阶段：使用 `COMPOSER_BASED`，不要重复加载默认 set。
+- `UP_PHALCON_4_TO_5` 是固定阶段。
+- `COMPOSER_BASED` 会根据环境再次选择阶段。
+- 同时配置可能导致同一个 set 被重复加入。
 
-未来可以通过 autoload gate 统一解决。
+决策详见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ---
 
@@ -427,7 +424,7 @@ src/Support/Tests/Set/ComposerBased/ComposerBasedConfigTest.php
 4. 不会同时加载多个阶段的 set。
 5. 3 → 5 仍由 CLI wrapper 分阶段执行。
 6. 单测覆盖主要版本来源和边界情况。
-7. README 明确说明与 `extra.rector.includes`、显式 SetList 常量的区别。
+7. README 明确说明 `COMPOSER_BASED` 与固定阶段常量的区别，并说明本包不启用自动加载。
 8. 全量 PHPUnit 通过。
 9. `composer validate --no-check-publish` 通过。
 

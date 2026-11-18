@@ -33,19 +33,9 @@
             "RectorPhalcon\\Support\\Tests\\": "src/Support/Tests"
         }
     },
-    "extra": {
-        "rector": {
-            "includes": [
-                "src/Phalcon5/Config/Set/phalcon50.php"
-            ]
-        }
-    },
     "minimum-stability": "dev",
     "prefer-stable": true,
     "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "rector/extension-installer": true
-        }
+        "sort-packages": true
     }
 }

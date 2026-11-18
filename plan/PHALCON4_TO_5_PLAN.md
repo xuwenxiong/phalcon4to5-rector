@@ -21,7 +21,7 @@
 - Phalcon 5.0.x 补丁版本，以及无破坏性变更的 5.x 小版本：继续使用 `phalcon50.php`。
 - 仅对较新 5.x 成立的破坏性变更：新增附加规则集，如 `src/Phalcon5/Config/Set/phalcon513.php`，不重命名 `phalcon50.php`。
 - Phalcon 5 → 6 的新主版本：新增 `src/Phalcon6/Config/Set/phalcon60.php`。
-- `extra.rector.includes` 继续只登记 `phalcon50.php`，避免用户升级后自动加载行为发生变化。
+- 规则集不通过 `extension-installer` 自动加载，用户必须显式选择 set。
 
 ---
 
@@ -53,7 +53,7 @@ README 明确提示：项目处于开发测试阶段，生产使用前必须先 
 
 ---
 
-## 二、包结构与自动加载机制
+## 二、包结构与规则集接入机制
 
 ### 2.1 Composer 约定
 
@@ -72,33 +72,32 @@ README 明确提示：项目处于开发测试阶段，生产使用前必须先 
   - `RectorPhalcon\Phalcon5\Tests\` → `src/Phalcon5/Tests`
   - `RectorPhalcon\Set\Tests\` → `src/Set/Tests`
   - `RectorPhalcon\Support\Tests\` → `src/Support/Tests`
-- 规则集登记：
-  - `extra.rector.includes` → `src/Phalcon5/Config/Set/phalcon50.php`
-- 插件白名单：
-  - 允许 `rector/extension-installer`
+- 规则集接入：
+  - 不配置 `extra.rector.includes`
+  - 不启用 `rector/extension-installer` 插件白名单
+  - 用户通过 `PhalconSetList` 显式选择规则集
 
-### 2.2 自动加载链路
+### 2.2 显式接入链路
 
 ```text
-composer install / composer update
-  └─ rector/extension-installer 扫描 vendor/ 下所有包的 composer.json
-      └─ 找出 "type": "rector-extension" 的包
-          └─ 读取 extra.rector.includes
-              └─ 本包登记 src/Phalcon5/Config/Set/phalcon50.php
-                  └─ 汇总生成 vendor/rector/extension-installer/src/GeneratedConfig.php
+用户在 rector.php 中选择 PhalconSetList 常量
+  ├─ UP_PHALCON_4_TO_5
+  │   └─ src/Phalcon5/Config/Set/phalcon50.php
+  └─ COMPOSER_BASED
+      └─ src/Support/Set/ComposerBased/config.php
+          └─ PhalconSetResolver
+              └─ 命中目标 Phalcon 5 时选择 UP_PHALCON_4_TO_5
 
 rector 启动
-  └─ 自动加载 GeneratedConfig.php
-      └─ include 其中登记的所有配置文件
-          └─ src/Phalcon5/Config/Set/phalcon50.php 被加载
-              └─ phalcon50.php 中注册的规则生效
+  └─ 加载用户 rector.php 中 withSets() 指定的配置
+      └─ phalcon50.php 中注册的规则生效
 ```
 
-因此用户安装本包和插件后，无需在项目 `rector.php` 中手写 `$rectorConfig->sets([...])`。
+本包不通过 `extension-installer` 自动加载规则集，决策见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ### 2.3 显式选择规则集
 
-不使用插件时，用户可以在 `rector.php` 中通过公共 `PhalconSetList` 选择规则集：
+用户可以在 `rector.php` 中通过公共 `PhalconSetList` 选择规则集：
 
 ```php
 use RectorPhalcon\Set\PhalconSetList;
@@ -675,7 +674,7 @@ use Phalcon\Loader; new Loader()
 - [x] 按目标版本划分目录：`src/Phalcon5/`、未来的 `src/Phalcon4/`。
 - [x] 抽象规则基类放在 `src/Base/`，通用支持代码放在 `src/Support/`。
 - [x] 公共 SetList 常量入口 `RectorPhalcon\Set\PhalconSetList`，后续升级阶段共用同一入口。
-- [x] 当前已实现规则集通过 `extra.rector.includes` 自动加载。
+- [x] 公共 SetList 显式接入当前已实现规则集，不启用 extension-installer 自动加载。
 - [x] 按目标版本自动选择规则集的 Composer-based 配置接入（`PhalconSetList::COMPOSER_BASED`）。
 - [ ] Phalcon 3 → 4、Phalcon 3 → 5 各阶段规则集接入公共入口。
 
@@ -685,7 +684,7 @@ use Phalcon\Loader; new Loader()
 - [x] `Phalcon\Assets\Manager` 构造器注入 `Phalcon\Html\TagFactory`。
 - [x] `Phalcon\Text` / `Phalcon\Helper` → `Phalcon\Support\HelperFactory`。
 - [x] 已移除且无替代类输出 TODO 提示。
-- [x] 接入 `rector/extension-installer` 自动注册规则集。
+- [x] 决定不采用 `rector/extension-installer` 自动注册规则集。
 - [x] `PREFIX_MAP` 支持 `Phalcon\Validation` 整个子命名空间迁移。
 - [x] 引用写法保持原样。
 - [x] 相对子命名空间引用保持相对形态。
@@ -767,7 +766,7 @@ use Phalcon\Loader; new Loader()
 
 ```text
 composer.json
-  - 包类型、autoload、extra.rector.includes、插件白名单
+  - 包类型、autoload、显式规则集接入约定（无 extra.rector.includes）
 
 src/Phalcon5/Config/Set/phalcon50.php
   - 4 → 5 规则集入口

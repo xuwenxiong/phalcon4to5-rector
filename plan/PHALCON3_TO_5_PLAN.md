@@ -6,7 +6,7 @@
 >
 > - 当前分支已实现 Phalcon 4 → 5：`src/Phalcon5/Config/Set/phalcon50.php`
 > - Phalcon 3 → 4 仍在规划中，详见 `plan/PHALCON3_TO_4_PLAN.md`
-> - `extra.rector.includes` 只自动加载 `phalcon50.php`
+> - 规则集不通过 extension-installer 自动加载，由用户显式选择
 >
 > 目标：等 3 → 4 能力落地后，提供一个“直接升级”体验，让用户可以用一个入口/一条命令完成 Phalcon 3.x → 5.x 升级。
 
@@ -119,57 +119,37 @@ vendor/bin/rector-phalcon upgrade:3-to-5 --path src
 
 以下现有用法继续保留：
 
-- 4 → 5 自动加载：`extra.rector.includes` 继续只登记 `phalcon50.php`
-- 3 → 4 手动选择：用户显式引用 `src/Phalcon4/Config/Set/phalcon40.php`
+- 4 → 5：用户通过 `PhalconSetList::UP_PHALCON_4_TO_5` 显式选择
+- 3 → 4：落地后用户通过 `PhalconSetList::UP_PHALCON_3_TO_4` 显式选择
 - 分阶段升级：先 3 → 4，测试通过后手动再跑 4 → 5
 
 “直接升级”是新增便利入口，不替代现有分阶段流程。
 
 ---
 
-## 四、关键设计：autoload gate
+## 四、关键设计：显式选择阶段
 
-这是两阶段方案能否可靠工作的关键。
-
-由于本包是 `rector-extension`，当用户安装本包后，`extra.rector.includes` 会让 `phalcon50.php` 在每次 Rector 启动时被自动加载。这样在执行第一阶段时，实际配置会变成：
+本包不通过 `extension-installer` 自动加载规则集，因此 3 → 5 的两阶段执行不需要 autoload gate 环境变量。wrapper 只负责为每个阶段生成对应的显式配置：
 
 ```text
-phalcon40.php       ← 显式指定
-phalcon50.php       ← extension-installer 自动加载
-```
+阶段 1 wrapper
+  └─ 只加载 src/Phalcon4/Config/Set/phalcon40.php
+      → 只有 3 → 4 规则生效
 
-这正是我们要避免的混跑。
-
-因此需要在 `src/Phalcon5/Config/Set/phalcon50.php` 增加一个“自动加载闸门”：
-
-```text
-如果环境变量 RECTOR_PHALCON_SKIP_AUTOLOAD=1：
-    phalcon50.php 变成 no-op，不注册任何规则
-否则：
-    正常注册 4 → 5 规则
-```
-
-这样第一阶段wrapper 可以：
-
-```text
-RECTOR_PHALCON_SKIP_AUTOLOAD=1
-  + 显式加载 phalcon40.php
-  → 只有 3 → 4 规则生效
-```
-
-第二阶段wrapper：
-
-```text
-不设置该环境变量
-  + 显式加载 phalcon50.php（或依赖自动加载）
-  → 只有 4 → 5 规则生效
+阶段 2 wrapper
+  └─ 只加载 src/Phalcon5/Config/Set/phalcon50.php
+      → 只有 4 → 5 规则生效
 ```
 
 约束：
 
-- 这个环境变量是内部实现细节，不要求普通用户理解。
-- 默认值必须保持现状，不能影响现有 4 → 5 用户。
-- `Phalcon50Set` 测试应在默认环境下运行，确保 no-op 分支不被误触发。
+- 每个阶段必须使用独立的 Rector 进程。
+- 每阶段只加载一个目标版本的 set。
+- 不通过 `extra.rector.includes` 注入任何默认 set。
+- 不设置 `RECTOR_PHALCON_SKIP_AUTOLOAD` 之类的环境变量。
+- `Phalcon40Set`、`Phalcon50Set` 各自独立运行，确保阶段隔离。
+
+决策详见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
 ---
 
@@ -182,13 +162,13 @@ RECTOR_PHALCON_SKIP_AUTOLOAD=1
 优点：
 
 - 不需要新 CLI。
-- 不受 wrapper 与 extension-installer 交互影响。
+- 不受 wrapper 与自动加载机制交互影响。
 - 可以马上落地。
 
 缺点：
 
 - 不是真正的“一条命令”。
-- 第一阶段仍需要用户自己保证 `phalcon50.php` 不被自动加载；需要配合 autoload gate 或临时 composer 环境。
+- 第一阶段仍需要用户自己按正确的阶段顺序执行两条命令。
 
 ### 方案 B：新增项目内 CLI wrapper（推荐）
 
@@ -214,8 +194,8 @@ wrapper 职责：
 
 1. 解析 `--path`、`--dry-run`、`--config` 等参数。
 2. 为每一阶段生成临时 Rector 配置。
-3. 第一阶段设置 `RECTOR_PHALCON_SKIP_AUTOLOAD=1`。
-4. 第二阶段恢复默认环境。
+3. 第一阶段只加载 `src/Phalcon4/Config/Set/phalcon40.php`。
+4. 第二阶段只加载 `src/Phalcon5/Config/Set/phalcon50.php`。
 5. 透传 Rector 输出和退出码。
 6. 失败时明确提示当前停在哪个阶段。
 
@@ -417,15 +397,15 @@ README 增加“方式四：Phalcon 3 → 5 直接升级（实验/推荐入口�
 
 ### 阶段 0：冻结基线
 
-- 确认当前 46 个测试全绿。
-- 确认 `extra.rector.includes` 仍只登记 `phalcon50.php`。
+- 确认当前测试全绿。
+- 确认 `composer.json` 不含 `extra.rector.includes`。
 - 确认 3 → 4 与 4 → 5 测试互相独立。
 
-### 阶段 1：autoload gate
+### 阶段 1：显式阶段隔离
 
-- 修改 `src/Phalcon5/Config/Set/phalcon50.php`，增加 `RECTOR_PHALCON_SKIP_AUTOLOAD=1` 的 no-op 分支。
-- 补测试：设置环境变量时，v5 set 不注册规则。
-- 确认默认行为完全不变。
+- 不修改 `src/Phalcon5/Config/Set/phalcon50.php` 的自动加载行为，因为本包根本没有自动加载。
+- 确认每个阶段由 wrapper 生成独立配置，只加载对应 set。
+- 确认阶段之间没有规则交叉注册。
 
 ### 阶段 2：文档式直接升级
 
@@ -439,8 +419,8 @@ README 增加“方式四：Phalcon 3 → 5 直接升级（实验/推荐入口�
 - 新增 `bin/rector-phalcon`。
 - 新增 `RectorPhalcon\Upgrade\` 命名空间和 PSR-4 映射。
 - 实现 `upgrade:3-to-5`：
-  - 阶段 1 设置 gate 环境变量并加载 `phalcon40.php`。
-  - 阶段 2 恢复默认环境并加载 `phalcon50.php`。
+  - 阶段 1 只加载 `phalcon40.php`。
+  - 阶段 2 只加载 `phalcon50.php`。
 - 实现 apply 模式。
 - 实现基于临时副本的 dry-run 模式。
 
@@ -485,11 +465,11 @@ Phalcon35ClassRenames = resolve3to4(v3Class) → resolve4to5(result)
 
 ## 十一、验收标准
 
-1. 默认安装本包后，4 → 5 自动加载行为不变。
+1. 安装本包后不会自动加载任何规则集，用户必须显式配置。
 2. `Phalcon40Set`、`Phalcon50Set`、单规则测试全部继续通过。
 3. `upgrade:3-to-5 --path <dir>` 能完成两阶段 apply。
 4. `upgrade:3-to-5 --dry-run` 的阶段 2 结果基于阶段 1 之后的代码。
-5. 第一阶段不会加载 v5 规则；通过 autoload gate 验证。
+5. 第一阶段不会加载 v5 规则；通过 wrapper 生成的阶段专用配置验证。
 6. 跨阶段类名映射 fixture 全部通过。
 7. 重复运行直接升级不产生额外 diff。
 8. 失败时明确报告阶段和当前代码状态。
@@ -500,7 +480,7 @@ Phalcon35ClassRenames = resolve3to4(v3Class) → resolve4to5(result)
 ## 十二、关键文件清单（预计）
 
 ```text
-src/Phalcon5/Config/Set/phalcon50.php                         # 增加 autoload gate
+src/Phalcon4/Config/Set/phalcon40.php                         # 阶段 1 显式加载的目标 set（规划中）
 bin/rector-phalcon                                # 新增 CLI wrapper
 composer.json                                     # bin + RectorPhalcon\Upgrade\ PSR-4
 src/Upgrade/...                                   # wrapper 实现
@@ -518,15 +498,15 @@ plan/PHALCON4_TO_5_PLAN.md                         # 标注 direct-upgrade 复�
 
 建议 MVP 只做：
 
-1. autoload gate
+1. 确认显式阶段隔离
 2. `docs/UPGRADE_3_TO_5.md`
 3. 3 → 5 集成 fixture
 4. 后续再决定是否做 CLI wrapper
 
 理由：
 
-- 现在 3 → 4 只完成 P0，直接升级的完整度仍受 P1/P2 限制。
-- autoload gate 是所有后续方案的基础。
+- 现在 3 → 4 仍在规划中，直接升级的完整度受其实现进度限制。
+- 显式阶段隔离是所有后续方案的基础。
 - 集成 fixture 能提前暴露两阶段真实交互问题。
 - CLI wrapper 是可玩性提升，不是正确性前提。
 
