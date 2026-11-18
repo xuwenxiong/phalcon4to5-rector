@@ -28,7 +28,6 @@ final class RemovedClassUsageHintRector extends AbstractRemovedClassUsageHintRec
         'phalcon\logger\adapter\firephp' => 'was removed in Phalcon v4 - choose another logger adapter manually',
         'phalcon\logger\formatter\firephp' => 'was removed in Phalcon v4 - choose another formatter manually',
         'phalcon\logger\formatter\syslog' => 'was removed in Phalcon v4 - choose another formatter manually',
-        'phalcon\logger\multiple' => 'was removed in Phalcon v4 - use a single Logger with multiple adapters manually',
         'phalcon\mvc\collection\behavior' => 'was removed in Phalcon v4 - reimplement collection behavior manually',
         'phalcon\mvc\collection\behavior\softdelete' => 'was removed in Phalcon v4 - reimplement soft delete manually',
         'phalcon\mvc\collection\behavior\timestampable' => 'was removed in Phalcon v4 - reimplement timestampable manually',

@@ -7,6 +7,7 @@ use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
+use RectorPhalcon\Phalcon4\Rector\Stmt\LoggerMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
@@ -28,6 +29,7 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->rules([
         RemovedClassUsageHintRector::class,
         CacheMigrationHintRector::class,
+        LoggerMigrationHintRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
         RenameCliConsoleAddModulesRector::class,
