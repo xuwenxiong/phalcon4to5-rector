@@ -32,6 +32,16 @@ composer require --dev xuwenxiong/rector-phalcon
 
 以下三种方式任选其一，不要同时叠加使用，否则可能出现意外结果。
 
+### 可用规则集常量
+
+> 这些是规则集入口常量，不是单条规则的开关。
+
+| 常量 | 作用 |
+|---|---|
+| `PhalconSetList::UP_PHALCON_4_TO_5` | 显式加载当前已实现的 Phalcon 4 → 5 规则集，指向 `src/Phalcon5/Config/Set/phalcon50.php` |
+| `PhalconSetList::UP_TO_PHALCON_50` | `UP_PHALCON_4_TO_5` 的别名，采用 Rector 扩展常见的 `UP_TO_*` 命名风格 |
+| `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择单个升级阶段；当前探测到目标 Phalcon 5 时加载 4 → 5 规则集，其他情况不加载 |
+
 ### 方式一：自动加载（推荐）
 
 安装 Rector 扩展自动加载器后，当前规则集会自动注册：
