@@ -100,7 +100,10 @@ Phalcon4 的规则继承 Phalcon5 的具体规则
 Phalcon5 的规则引用 Phalcon4 的映射表
 ```
 
-共享能力必须上移到 `src/Shared/`。
+共享能力按职责上移：
+
+- 可被多个版本规则继承的抽象基类放到 `src/Base/`。
+- 版本解析、配置解析、值对象等通用支持代码放到 `src/Support/`。
 
 ### 2.5 不考虑向后兼容
 
@@ -126,12 +129,13 @@ project-root/
 │   ├── Set/
 │   │   └── PhalconSetList.php                 # 公共稳定 API，所有升级阶段共用
 │   │
-│   ├── Shared/
-│   │   ├── Rector/
-│   │   │   └── Stmt/
-│   │   │       ├── AbstractRenameUseImportsRector.php
-│   │   │       └── AbstractRemovedClassUsageHintRector.php
-│   │   │
+│   ├── Base/
+│   │   └── Rector/
+│   │       └── Stmt/
+│   │           ├── AbstractRenameUseImportsRector.php
+│   │           └── AbstractRemovedClassUsageHintRector.php
+│   │
+│   ├── Support/
 │   │   ├── Set/
 │   │   │   └── ComposerBased/
 │   │   │       ├── PhalconVersionResolver.php
@@ -218,6 +222,8 @@ exclude-from-classmap
 说明：
 
 - `RectorPhalcon\` 根映射覆盖所有生产代码。
+- `RectorPhalcon\Base\...` 对应 `src/Base/...`，只放抽象基类。
+- `RectorPhalcon\Support\...` 对应 `src/Support/...`，放通用支持代码。
 - 测试放在版本目录内，但通过 `autoload-dev` 明确声明。
 - `exclude-from-classmap` 避免生产优化 autoload 时把测试类打进 classmap。
 - 不再需要 `RectorPhalcon\Set\` 这种窄映射，因为根映射已经覆盖 `src/Set/`。
@@ -333,26 +339,56 @@ RectorPhalcon\Phalcon5\ImportShortener
 RectorPhalcon\Phalcon4\ClassRenames
 ```
 
-### 5.6 共享规则基类
+### 5.6 Base：抽象规则基类
 
 位置：
 
 ```text
-src/Shared/Rector/Stmt/AbstractRenameUseImportsRector.php
-src/Shared/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
+src/Base/Rector/Stmt/AbstractRenameUseImportsRector.php
+src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 ```
 
-目的：
+命名空间：
 
-- 避免 `Phalcon4` 继承 `Phalcon5` 的具体实现。
+```text
+RectorPhalcon\Base\Rector\Stmt\...
+```
+
+职责：
+
+- 只放需要被多个版本规则继承的抽象类。
 - 统一抽象可重写点：
   - `resolveNewClass()`
   - `prefixMap()`
   - `HINT_MARKER`
   - `REMOVED_CLASS_HINTS`
+- 避免 `Phalcon4` 继承 `Phalcon5` 的具体实现。
 - 让每个版本只提供自己的映射、提示清单和 RuleDefinition。
 
-### 5.7 测试
+### 5.7 Support：通用支持代码
+
+位置：
+
+```text
+src/Support/Set/ComposerBased/PhalconVersionResolver.php
+src/Support/Set/ComposerBased/PhalconSetResolver.php
+src/Support/ValueObject/PhalconVersion.php
+```
+
+命名空间：
+
+```text
+RectorPhalcon\Support\...
+```
+
+职责：
+
+- 探测项目使用的 Phalcon 版本。
+- 根据版本决定使用哪个升级 set。
+- 提供版本值对象，避免各版本规则各自定义版本判断逻辑。
+- 不承载 Rector 规则实现，也不作为版本规则基类使用。
+
+### 5.8 测试
 
 位置：
 
@@ -377,7 +413,7 @@ src/Phalcon4/Tests
 
 fixture 仍沿用 `.php.inc` 和 `-----` 约定。
 
-### 5.8 跨版本直接升级
+### 5.9 跨版本直接升级
 
 位置：
 
@@ -417,7 +453,8 @@ composer validate 通过
 
 ```text
 src/Set/
-src/Shared/
+src/Base/
+src/Support/
 src/Upgrade/
 src/Phalcon5/
 src/Phalcon5/Config/Set/
@@ -451,19 +488,27 @@ src/Phalcon4/
 5. 调整所有 `use`。
 6. 调整测试 config 中引用的 set 路径。
 
-### 6.4 抽象 Shared 基类
+### 6.4 抽象 Base 基类与 Support 代码
 
-把当前 `RenameUseImportsRector`、`RemovedClassUsageHintRector` 的通用部分上移至：
+把当前 `RenameUseImportsRector`、`RemovedClassUsageHintRector` 中“可被继承的通用部分”上移至：
 
 ```text
-src/Shared/Rector/Stmt/
+src/Base/Rector/Stmt/
+```
+
+把版本探测和 set 选择相关代码放到：
+
+```text
+src/Support/Set/ComposerBased/
+src/Support/ValueObject/
 ```
 
 然后：
 
 - `src/Phalcon5/Rector/Stmt/RenameUseImportsRector.php` 只提供 v5 映射。
 - `src/Phalcon4/Rector/Stmt/RenameUseImportsRector.php` 只提供 v4 映射。
-- 二者都继承 Shared 基类，不再互相继承。
+- 二者都继承 Base 抽象基类，不再互相继承。
+- Composer-based 版本解析不依赖任何具体版本规则目录。
 
 ### 6.5 迁移 Phalcon4
 
@@ -473,7 +518,7 @@ src/Shared/Rector/Stmt/
 2. 移动 Phalcon4 测试到 `src/Phalcon4/Tests/`。
 3. 移动 `config/sets/phalcon40.php` 到 `src/Phalcon4/Config/Set/phalcon40.php`。
 4. 命名空间改为 `RectorPhalcon\Phalcon4\...`。
-5. 移除对 `RectorPhalcon\Phalcon5` 具体类的继承，改为继承 Shared 基类。
+5. 移除对 `RectorPhalcon\Phalcon5` 具体类的继承，改为继承 Base 抽象基类。
 
 ### 6.6 更新 Composer
 
@@ -577,7 +622,7 @@ plan/PHALCON3_TO_5_PLAN.md
 3. 所有 PHP 类都使用 `RectorPhalcon\` 根命名空间。
 4. 子命名空间与目录层级一致。
 5. `Phalcon4` 不继承 `Phalcon5` 的具体类。
-6. 共享逻辑都在 `src/Shared/`。
+6. 可被继承的抽象规则基类都在 `src/Base/`；通用支持代码都在 `src/Support/`。
 7. `composer.json` 只有一个生产 PSR-4 根映射：`RectorPhalcon\ → src/`。
 8. `extra.rector.includes` 指向新 set 路径。
 9. `phpunit.xml` 指向新测试目录。
@@ -618,7 +663,8 @@ plan/PHALCON3_TO_5_PLAN.md
 ```text
 Phalcon4/
 Phalcon5/
-Shared/
+Base/
+Support/
 Upgrade/
 ```
 
@@ -656,7 +702,7 @@ bin/rector-phalcon
 
 建议一次完成，但按提交拆分：
 
-1. 提交 1：建立目标目录与 Shared 基类，暂不改行为。
+1. 提交 1：建立目标目录与 Base 抽象基类，暂不改行为。
 2. 提交 2：迁移 Phalcon5 实现、测试、set 配置。
 3. 提交 3：迁移 Phalcon4 实现、测试、set 配置。
 4. 提交 4：更新 composer、phpunit、autoload。
@@ -674,7 +720,8 @@ bin/rector-phalcon
 
 ```text
 Set/       公共入口
-Shared/    跨版本共享能力
+Base/      可被各版本继承的抽象基类
+Support/   通用支持代码
 Phalcon4/  3→4 阶段规则
 Phalcon5/  4→5 阶段规则
 Upgrade/   跨阶段直接升级编排
