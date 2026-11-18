@@ -84,6 +84,8 @@ README 只保留简要使用入口；规则清单、限制和 Roadmap 以本文�
 
 注意：当前 dev stubs 是 `^5.0`，但 P0 主要是配置驱动的类名/`use` 改写，不依赖反射。P1 引入 `RenameMethodRector` 前，需要建立 `phalcon/ide-stubs:^4.0` 的测试矩阵。
 
+用户侧建议：在执行 `UP_PHALCON_3_TO_4` 阶段前，将运行 Rector 的 Composer 环境中的 `phalcon/ide-stubs` 切换为 `^4.0`。当前 P0 不强制；但 P1 方法重命名需要它做类型解析，`COMPOSER_BASED` 也用它识别目标 Phalcon 4。若使用 `COMPOSER_BASED` 且未安装 stubs/扩展，版本探测会返回 no-op。
+
 ### 2.2 显式接入链路
 
 ```text
@@ -483,7 +485,7 @@ src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 
 当前 P0 不用 `RenameMethodRector`，因此不依赖 stubs 做类型解析。
 
-P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵。
+P1 引入方法重命名时才需要 `phalcon/ide-stubs:^4.0` 矩阵，用户侧也建议在该阶段前切换到该版本 stubs，以保证方法调用的类型可解析。
 
 ---
 

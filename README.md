@@ -34,6 +34,21 @@ composer require --dev rector/rector:^2.1
 composer require --dev xuwenxiong/rector-phalcon
 ```
 
+建议在执行每个升级阶段前，将运行 Rector 的 Composer 环境中的 `phalcon/ide-stubs` 切换为该阶段的目标版本：
+
+| 阶段 | 建议的 stubs 版本 |
+|---|---|
+| Phalcon 3 → 4 | `phalcon/ide-stubs:^4.0` |
+| Phalcon 4 → 5 | `phalcon/ide-stubs:^5.0` |
+
+例如：
+
+```bash
+composer require --dev phalcon/ide-stubs:^4.0
+```
+
+当前 3 → 4 基础规则不强制依赖 stubs，但后续方法重命名需要它做类型解析；`COMPOSER_BASED` 也会用它识别目标版本。
+
 ## 使用
 
 本包不通过 `rector/extension-installer` 自动加载规则集，以避免多版本升级阶段被无意识启用。请在 `rector.php` 中选择以下任一方式。
