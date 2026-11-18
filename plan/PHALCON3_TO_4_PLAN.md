@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1 的 stubs CI、ACL/Paginator/CLI 方法重命名、Filter 与 DB 常量重命名、`Phalcon\Text` → `Phalcon\Helper\Str` 已实施，其余 P1/P2 持续迭代中。
+> 状态：P0 已实施，P1 全部实施（stubs CI、ACL/Paginator/CLI 重命名、Filter / DB 常量、`Text` → `Helper\Str`），P2 Cache checklist 已实施，其余 P2 持续迭代中。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -340,8 +340,6 @@ DB 侧已复用 `ClassRenames::MAP` 中已有的 `Phalcon\Db` → `Phalcon\Db\Ab
 
 - ACL：`Phalcon\Acl`
 - Assets filters：`CssMin`、`JsMin`
-- 旧 Cache Backend / Frontend：`Apc`、`Memcache`、`Mongo`、`Xcache`、`Base64`、`Data`、`Json`、`IgBinary`、`Factory` 等
-- `Phalcon\Cache\Multiple`
 - `Phalcon\Image`
 - 旧 Logger adapter/formatter：`Firephp`、`Syslog`、`Logger\Multiple`
 - 旧 Collection behavior/document/manager
@@ -355,6 +353,19 @@ DB 侧已复用 `ClassRenames::MAP` 中已有的 `Phalcon\Db` → `Phalcon\Db\Ab
 - 提示清单只包含“没有确定自动迁移方案”的类。
 - 有确定迁移方案的类交给类名映射或后续规则处理。
 - TODO 注释带标记，重复运行不会叠加。
+
+#### 4.4.3 `CacheMigrationHintRector`
+
+针对 `Phalcon\Cache\Frontend\*`、`Phalcon\Cache\Backend\*` 和 `Phalcon\Cache\Multiple` 输出结构化的 4 步 checklist，避免与通用 removed-class 提示重复。
+
+checklist 内容：
+
+1. 用 `Phalcon\Storage\Serializer\*` 或 serializer 配置替换旧 Frontend。
+2. 用 `Phalcon\Cache\Adapter\*` 替换旧 Backend。
+3. 用 `Phalcon\Cache\Cache` 或 `Phalcon\Cache\CacheFactory` 组合 adapter + serializer。
+4. 复核 TTL、prefix 以及 `get` / `set` / `has` / `delete` 语义。
+
+规则在 `RenameClassRector` 之前运行，因此 checklist 指向原始 Phalcon 3 类名；同一表达式上的类重命名仍会正常执行，例如 `Phalcon\Cache\Backend\File` → `Phalcon\Cache\Adapter\Stream`。
 
 ### 4.5 辅助类
 
@@ -402,17 +413,19 @@ src/Phalcon4/Tests/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
     └── Stmt/
+        ├── CacheMigrationHintRector/
         ├── RenameUseImportsRector/
         └── RemovedClassUsageHintRector/
 ```
 
 当前 fixture：
 
-- `Phalcon40Set`：10 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作，`text_to_helper_str.php.inc` 覆盖 Phalcon 3.4 `Text` 全部静态方法、`RANDOM_*` 常量与无关类跳过。
+- `Phalcon40Set`：11 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作，`text_to_helper_str.php.inc` 覆盖 Phalcon 3.4 `Text` 全部静态方法与 `RANDOM_*` 常量，`cache_migration_checklist.php.inc` 覆盖 Cache checklist 与类重命名协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
 - `RemovedClassUsageHintRector`：2 个 `.php.inc`
+- `CacheMigrationHintRector`：1 个 `.php.inc`
 - `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
 - `RenameCliConsoleAddModulesRector`：1 个 `.php.inc`
 
@@ -428,7 +441,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、Cache checklist、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -545,9 +558,10 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，以及 P1 的 ACL、Paginator、CLI 重命名、Filter / DB 常量重命名和 `Phalcon\Text` → `Phalcon\Helper\Str`。
-2. 结构性迁移未实现。
-   - Cache、Logger、Session、Filter 只输出 TODO 或保持原样。
+1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，P1 的 ACL、Paginator、CLI 重命名、Filter / DB 常量重命名和 `Phalcon\Text` → `Phalcon\Helper\Str`，以及 P2 的 Cache checklist。
+2. 其余结构性迁移未实现。
+   - Cache 已输出 4 步 checklist，但仍需人工改写。
+   - Logger、Session、Filter 只输出 TODO 或保持原样。
 3. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
@@ -601,11 +615,11 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
   - 17 个 Phalcon 3.4 `FETCH_*` 常量统一改写为 `Phalcon\Db\Enum::FETCH_*`
   - 清单集中在 `src/Phalcon4/DbConstants.php`
 - [x] `Phalcon\Text` → `Phalcon\Helper\Str`：静态方法与 `RANDOM_*` 常量由类映射统一改写。
-- [ ] 为上述规则补 fixture、规则集测试和文档更新。
+- [x] 为上述规则补 fixture、规则集测试和文档更新。
 
-### 8.3 P2：结构性迁移提示（待实施）
+### 8.3 P2：结构性迁移提示（进行中）
 
-- [ ] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
+- [x] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
 - [ ] Logger Multiple → 单 Logger + 多 Adapter 的 TODO/checklist。
 - [ ] Session Factory → Manager，以及 Adapter 变化的 TODO/checklist。
 - [ ] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
@@ -707,6 +721,9 @@ src/Phalcon4/Set/Phalcon4SetList.php
 
 src/Phalcon4/ImportShortener.php
   - 后续 P1/P2 新引入 Phalcon 类时补 use
+
+src/Phalcon4/Rector/Stmt/CacheMigrationHintRector.php
+  - 输出 Cache Frontend/Backend → Adapter + Serializer + Cache 的 4 步 checklist
 
 src/Phalcon4/Rector/MethodCall/RenameCliConsoleAddModulesRector.php
   - 改写 CLI Console addModules() → registerModules() 并保留合并语义

@@ -6,6 +6,7 @@ use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
+use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
@@ -26,6 +27,7 @@ return static function (RectorConfig $rectorConfig): void {
     // original token positions to preserve inline/short/relative references.
     $rectorConfig->rules([
         RemovedClassUsageHintRector::class,
+        CacheMigrationHintRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
         RenameCliConsoleAddModulesRector::class,
