@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0 已实施，P1 全部实施（stubs CI、ACL/Paginator/CLI 重命名、Filter / DB 常量、`Text` → `Helper\Str`），P2 Cache / Logger / Session checklist 已实施，其余 P2 持续迭代中。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist、`Model::save($data)` 自动改写、`handle()` URI 提示与 `getSource()` final 提示；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -392,6 +392,52 @@ checklist 内容：
 
 规则只输出提示，不改写 wiring。`Factory` → `Manager` 和 `Files` → `Stream` 的确定部分仍由类映射处理；`Memcache` 因目标选择依赖业务环境，只保留 checklist。
 
+#### 4.4.6 `FilterMigrationHintRector`
+
+针对 `new Phalcon\Filter()` 和 `new Phalcon\Filter\Factory()` 输出 4 步 checklist。规则只匹配对象实例化，不会把 `Phalcon\Filter::FILTER_*` 常量引用误判为迁移点。
+
+checklist 内容：
+
+1. 用 `Phalcon\Filter\FilterLocator` 或 `FilterLocatorFactory::newInstance()` 替换直接实例化的旧 Filter 对象。
+2. 只注册需要的 sanitizer；新的 locator 不再假设旧的默认集合。
+3. DI 定义返回 `Phalcon\Filter\FilterLocatorInterface`，不再是旧 filter 对象。
+4. 复核 `sanitize()` 调用与 sanitizer 名称。
+
+#### 4.4.7 `ModelSaveWithDataRector`
+
+把独立的 `$model->save($data, $whiteList = null)` 语句改写为：
+
+```php
+$model->assign($data, $whiteList = null);
+$model->save();
+```
+
+只处理 `Expression` 中的独立方法调用，且要求调用者能被解析为 `Phalcon\Mvc\Model` 或其子类。赋值表达式中的 `save($data)` 不改写，避免改变返回值语义。无参数 `save()` 保持原样。
+
+#### 4.4.8 `ApplicationHandleUriHintRector`
+
+对 `Phalcon\Mvc\Application`、`Phalcon\Mvc\Micro` 和 `Phalcon\Application\AbstractApplication` 上无参数的 `handle()` 调用输出 3 步 TODO，不自动补参数。
+
+提示内容：
+
+1. Phalcon 4 `Application` / `Micro::handle()` 要求显式传入 URI。
+2. 传入 `$request->getURI()` 或其他明确 URI。
+3. 复核 rewrite rules、默认路由与 not-found 处理。
+
+已有 URI 参数的调用以及无关对象的 `handle()` 会跳过。
+
+#### 4.4.9 `FinalGetSourceHintRector`
+
+对继承 `Phalcon\Mvc\Model` 的类中定义的 `getSource()` 方法输出 3 步 TODO，不自动改写方法体。
+
+提示内容：
+
+1. Phalcon 4 `Model::getSource()` 是 `final`，不能再覆盖。
+2. 删除 `getSource()` 覆盖，改在 `initialize()` 中调用 `$this->setSource()`。
+3. 复核表名、schema 与模型元数据。
+
+已有 TODO 标记的方法不会重复添加注释。
+
 ### 4.5 辅助类
 
 #### `ClassRenames`
@@ -433,12 +479,17 @@ src/Phalcon4/Tests/
     ├── ClassConstFetch/
     │   ├── RenameDbConstFetchRector/
     │   └── RenameFilterConstFetchRector/
+    ├── Expression/
+    │   ├── ApplicationHandleUriHintRector/
+    │   └── ModelSaveWithDataRector/
     ├── MethodCall/
     │   └── RenameCliConsoleAddModulesRector/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
     └── Stmt/
         ├── CacheMigrationHintRector/
+        ├── FilterMigrationHintRector/
+        ├── FinalGetSourceHintRector/
         ├── LoggerMigrationHintRector/
         ├── RenameUseImportsRector/
         ├── RemovedClassUsageHintRector/
@@ -447,7 +498,7 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：13 个 `.php.inc`，其中 `acl_method_renames.php.inc` 覆盖 ACL 方法重命名，`paginator_method_property_renames.php.inc` 覆盖 Paginator 方法与属性，`cli_method_rename.php.inc` 覆盖 CLI Console 方法重命名，`filter_const_renames.php.inc` 覆盖 Filter 常量，`db_const_renames.php.inc` 覆盖 DB 常量与类名协作，`text_to_helper_str.php.inc` 覆盖 Phalcon 3.4 `Text` 全部静态方法与 `RANDOM_*` 常量，`cache_migration_checklist.php.inc` 覆盖 Cache checklist 与类重命名协作，`logger_migration_checklist.php.inc` 覆盖 Logger checklist，`session_migration_checklist.php.inc` 覆盖 Session checklist 与类重命名协作。
+- `Phalcon40Set`：17 个 `.php.inc`，在此前 13 个基础上新增 `filter_locator_checklist.php.inc`、`model_save_with_data.php.inc`、`application_handle_uri_checklist.php.inc`、`final_get_source_checklist.php.inc`，覆盖剩余 P2 规则与类重命名/常量规则的协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
@@ -455,6 +506,10 @@ src/Phalcon4/Tests/
 - `CacheMigrationHintRector`：1 个 `.php.inc`
 - `LoggerMigrationHintRector`：1 个 `.php.inc`
 - `SessionMigrationHintRector`：1 个 `.php.inc`
+- `FilterMigrationHintRector`：1 个 `.php.inc`
+- `FinalGetSourceHintRector`：1 个 `.php.inc`
+- `ApplicationHandleUriHintRector`：1 个 `.php.inc`
+- `ModelSaveWithDataRector`：1 个 `.php.inc`
 - `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
 - `RenameCliConsoleAddModulesRector`：1 个 `.php.inc`
 
@@ -470,7 +525,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、Cache / Logger / Session checklist、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)` 改写、Cache / Logger / Session / Filter / handle URI / getSource checklist、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -587,14 +642,14 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0 类名/命名空间、`use` 导入、已移除类 TODO 提示，P1 的 ACL、Paginator、CLI 重命名、Filter / DB 常量重命名和 `Phalcon\Text` → `Phalcon\Helper\Str`，以及 P2 的 Cache / Logger / Session checklist。
-2. 其余结构性迁移未实现。
-   - Cache、Logger\Multiple、Session 已输出 4 步 checklist，但仍需人工改写。
-   - Filter 只输出 TODO 或保持原样。
-3. ACL / Paginator 方法重命名依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter / handle URI / getSource checklist，以及 `Model::save($data)` 自动改写。
+2. 结构性迁移仍以人工确认为主。
+   - Cache、Logger\Multiple、Session、Filter、`handle()` URI、`getSource()` 输出 checklist 或 TODO，但不自动重构架构。
+   - `Model::save($data)` 已自动拆分，但多行/复杂表达式仍需人工确认。
+3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 提示依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
-6. 3 → 5 直接升级的完整度仍受本阶段 P1/P2 完成度限制。
+6. 3 → 5 直接升级的完整度仍受真实项目验证结果限制。
 
 ---
 
@@ -646,15 +701,15 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 - [x] `Phalcon\Text` → `Phalcon\Helper\Str`：静态方法与 `RANDOM_*` 常量由类映射统一改写。
 - [x] 为上述规则补 fixture、规则集测试和文档更新。
 
-### 8.3 P2：结构性迁移提示（进行中）
+### 8.3 P2：结构性迁移提示（已完成）
 
 - [x] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
 - [x] Logger Multiple → 单 Logger + 多 Adapter 的 TODO/checklist。
 - [x] Session Factory → Manager，以及 Adapter 变化的 TODO/checklist。
-- [ ] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
-- [ ] `Model::save([...])` → `assign([...]); save()` 的固定形态改写或提示。
-- [ ] `Application` / `Micro::handle()` 缺少 URI 的人工检查提示。
-- [ ] `getSource()` 变 final 的迁移提示：`initialize()` + `setSource()`。
+- [x] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
+- [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
+- [x] `Application` / `Micro::handle()` 缺少 URI 的人工检查提示。
+- [x] `getSource()` 变 final 的迁移提示：`initialize()` + `setSource()`。
 
 ### 8.4 验证与发布（待实施）
 
@@ -759,6 +814,18 @@ src/Phalcon4/Rector/Stmt/LoggerMigrationHintRector.php
 
 src/Phalcon4/Rector/Stmt/SessionMigrationHintRector.php
   - 输出 Session Factory / Adapter 变化的 4 步 checklist
+
+src/Phalcon4/Rector/Stmt/FilterMigrationHintRector.php
+  - 输出旧 Filter 对象 → FilterLocator 的 4 步 checklist
+
+src/Phalcon4/Rector/Stmt/FinalGetSourceHintRector.php
+  - 输出 getSource() final → initialize() + setSource() 的 3 步 checklist
+
+src/Phalcon4/Rector/Expression/ApplicationHandleUriHintRector.php
+  - 输出 handle() 缺少 URI 的 3 步 TODO
+
+src/Phalcon4/Rector/Expression/ModelSaveWithDataRector.php
+  - 把 Model::save($data) 拆成 assign($data) + save()
 
 src/Phalcon4/Rector/MethodCall/RenameCliConsoleAddModulesRector.php
   - 改写 CLI Console addModules() → registerModules() 并保留合并语义

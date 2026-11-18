@@ -440,8 +440,8 @@ README 增加“方式四：Phalcon 3 → 5 直接升级（实验/推荐入口�
 
 按 `plan/PHALCON3_TO_4_PLAN.md` 继续推进：
 
-- P1：剩余方法重命名、结构性常量迁移后的补充规则
-- P2：剩余 Filter 对象 / Model::save / handle() URI / getSource() 结构性提示
+- P1：完成
+- P2：完成；下一步是为这些方法/常量/checklist 规则补 3 → 5 两阶段集成 fixture
 
 每完成一项，都要补 3 → 5 集成 fixture，而不是只补 3 → 4 单规则 fixture。
 
@@ -511,7 +511,7 @@ plan/PHALCON4_TO_5_PLAN.md                         # 标注 direct-upgrade 复�
 
 理由：
 
-- 现在 3 → 4 已完成 P0、P1 及 P2 的 Cache / Logger / Session checklist，直接升级的完整度仍受剩余 P2 实现进度限制。
+- 现在 3 → 4 的 P0 / P1 / P2 规则已全部实施，直接升级的完整度仍受真实项目验证与两阶段集成 fixture 覆盖限制。
 - 显式阶段隔离是所有后续方案的基础。
 - 集成 fixture 能提前暴露两阶段真实交互问题。
 - CLI wrapper 是可玩性提升，不是正确性前提。
