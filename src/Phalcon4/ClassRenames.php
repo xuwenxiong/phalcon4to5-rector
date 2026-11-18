@@ -68,6 +68,10 @@ final class ClassRenames
         // Factory
         'Phalcon\Factory' => 'Phalcon\Factory\AbstractFactory',
 
+        // Filter
+        'Phalcon\Filter' => 'Phalcon\Filter\Filter',
+        'Phalcon\FilterInterface' => 'Phalcon\Filter\FilterInterface',
+
         // Flash
         'Phalcon\Flash' => 'Phalcon\Flash\AbstractFlash',
 

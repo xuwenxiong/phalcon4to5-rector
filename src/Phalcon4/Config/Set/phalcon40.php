@@ -8,10 +8,13 @@ use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRec
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use Rector\Config\RectorConfig;
+use Rector\Renaming\Rector\ClassConstFetch\RenameClassConstFetchRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Renaming\Rector\PropertyFetch\RenamePropertyRector;
 use Rector\Renaming\ValueObject\MethodCallRename;
+use Rector\Renaming\ValueObject\RenameClassAndConstFetch;
+use Rector\Renaming\ValueObject\RenameClassConstFetch;
 use Rector\Renaming\ValueObject\RenameProperty;
 
 return static function (RectorConfig $rectorConfig): void {
@@ -28,13 +31,31 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     // ---------------------------------------------------------------------
-    // 2. Namespace / class renames (Phalcon 3 -> 4)
+    // 2. Filter constant renames
+    // ---------------------------------------------------------------------
+    // Configure both the v3 and v4 class names so the rule is order-independent
+    // with RenameClassRector below.
+    $rectorConfig->ruleWithConfiguration(RenameClassConstFetchRector::class, [
+        // v3 class references: force the v4 class as well, because the new class
+        // no longer owns the old constant.
+        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_ALPHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
+        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_APHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
+        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_SPECIAL_CHARS', 'Phalcon\Filter\Filter', 'FILTER_SPECIAL'),
+
+        // v4 class references: order-independent with RenameClassRector below.
+        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_ALPHANUM', 'FILTER_ALNUM'),
+        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_APHANUM', 'FILTER_ALNUM'),
+        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_SPECIAL_CHARS', 'FILTER_SPECIAL'),
+    ]);
+
+    // ---------------------------------------------------------------------
+    // 3. Namespace / class renames (Phalcon 3 -> 4)
     // ---------------------------------------------------------------------
     // https://docs.phalcon.io/4.2/upgrade/
     $rectorConfig->ruleWithConfiguration(RenameClassRector::class, ClassRenames::MAP);
 
     // ---------------------------------------------------------------------
-    // 3. Method renames
+    // 4. Method renames
     // ---------------------------------------------------------------------
     // The configured classes are Phalcon 4 names: RenameClassRector above has
     // already converted Phalcon 3 references to their v4 equivalents.
@@ -62,7 +83,7 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     // ---------------------------------------------------------------------
-    // 4. Repository property renames
+    // 5. Repository property renames
     // ---------------------------------------------------------------------
     $rectorConfig->ruleWithConfiguration(RenamePropertyRector::class, [
         new RenameProperty('Phalcon\Paginator\Repository', 'before', 'previous'),
@@ -71,7 +92,7 @@ return static function (RectorConfig $rectorConfig): void {
     ]);
 
     // ---------------------------------------------------------------------
-    // 5. `use` imports — Phalcon classes only
+    // 6. `use` imports — Phalcon classes only
     // ---------------------------------------------------------------------
     // Keep the same scoped-import policy as phalcon50.php: non-Phalcon FQCNs
     // are never shortened globally.

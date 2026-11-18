@@ -357,6 +357,7 @@ CI 至少分两个 job：
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 的 Cache 是架构级重构，P0 只做类重命名；此 v5 规则会看到 v4 形态后才可靠 |
 | 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
+| 常量重命名 | 3 → 4 已实现 Filter 常量；DB 常量到 `Phalcon\Db\Enum` 仍待实施 |
 
 ### 8.3 不应在同一次运行中混用
 
@@ -510,7 +511,7 @@ plan/PHALCON4_TO_5_PLAN.md                         # 标注 direct-upgrade 复�
 
 理由：
 
-- 现在 3 → 4 已完成 P0 及部分 P1 方法重命名，直接升级的完整度仍受 P1/P2 实现进度限制。
+- 现在 3 → 4 已完成 P0 及部分 P1 方法与常量重命名，直接升级的完整度仍受 P1/P2 实现进度限制。
 - 显式阶段隔离是所有后续方案的基础。
 - 集成 fixture 能提前暴露两阶段真实交互问题。
 - CLI wrapper 是可玩性提升，不是正确性前提。
