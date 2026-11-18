@@ -7,7 +7,7 @@
 > - 公共 SetList 入口：`src/Set/PhalconSetList.php`
 > - Phalcon 5 版本内部 SetList：`src/Phalcon5/Set/Phalcon5SetList.php`
 > - 当前已实现规则集：`src/Phalcon5/Config/Set/phalcon50.php`
-> - Composer-based 骨架：
+> - Composer-based 实现：
 >   - `src/Support/Set/ComposerBased/PhalconVersionResolver.php`
 >   - `src/Support/Set/ComposerBased/PhalconSetResolver.php`
 >   - `src/Support/ValueObject/PhalconVersion.php`
@@ -141,7 +141,7 @@ src/Support/Set/ComposerBased/config.php
 | 探测不到 | no-op，不注册 Phalcon 规则 |
 | Phalcon 3 目标为 5 | 不自动合并两个 set，提示使用 `upgrade:3-to-5` 分阶段 CLI |
 
-当前 `main` 只实现了 Phalcon 5，因此当前阶段的行为应限制为：
+当前分支只实现了 Phalcon 5，因此当前阶段的行为应限制为：
 
 ```text
 探测到目标 Phalcon 5
@@ -233,7 +233,7 @@ Phalcon\Version::get()
 
 ---
 
-## 六、当前 Support 骨架的职责
+## 六、当前 Support 实现的职责
 
 ### 6.1 `PhalconVersion`
 
@@ -276,13 +276,13 @@ src/Support/Set/ComposerBased/PhalconSetResolver.php
 - 根据主版本返回应加载的 set 路径列表。
 - 当前阶段只映射已实现的 4 → 5。
 
-注意：
+当前实现：
 
-> 当前骨架中的版本到 set 映射需要在正式接入前按本文第四节重新核对，确保探测到 Phalcon 5 时选择 `UP_PHALCON_4_TO_5`，而不是反过来按源版本判断。
+> 探测到目标 Phalcon 5 时选择 `UP_PHALCON_4_TO_5`；其他当前未实现阶段返回空数组，不注册 Phalcon 规则。
 
 ### 6.4 Composer-based 配置文件
 
-计划新增：
+已新增：
 
 ```text
 src/Support/Set/ComposerBased/config.php
@@ -358,7 +358,7 @@ withSets([PhalconSetList::COMPOSER_BASED])
 
 ### 8.1 单元测试
 
-新增：
+已新增：
 
 ```text
 src/Support/Tests/Set/ComposerBased/PhalconVersionResolverTest.php
@@ -376,7 +376,7 @@ src/Support/Tests/Set/ComposerBased/PhalconSetResolverTest.php
 
 ### 8.2 SetList 测试
 
-扩展：
+已扩展：
 
 ```text
 src/Set/Tests/PhalconSetListTest.php
@@ -390,7 +390,7 @@ src/Set/Tests/PhalconSetListTest.php
 
 ### 8.3 集成测试
 
-新增一个简单配置加载测试：
+已新增一个简单配置加载测试：
 
 ```text
 src/Support/Tests/Set/ComposerBased/ComposerBasedConfigTest.php
@@ -404,18 +404,18 @@ src/Support/Tests/Set/ComposerBased/ComposerBasedConfigTest.php
 
 ---
 
-## 九、实施步骤
+## 九、实施记录
 
-1. 明确版本到 set 的最终映射表。
-2. 修正 `PhalconSetResolver` 的映射逻辑。
-3. 为 `PhalconVersionResolver` 增加可测试注入点，避免测试强依赖真实 Composer 环境。
-4. 新增 `src/Support/Set/ComposerBased/config.php`。
-5. 在 `PhalconSetList` 中增加 `COMPOSER_BASED` 常量。
-6. 扩展 SetList 测试。
-7. 新增 Resolver 单测。
-8. 新增配置集成测试。
-9. 更新 README：增加 Composer-based 用法和限制。
-10. 更新 `plan/PHALCON3_TO_5_PLAN.md`：说明 3 → 5 不依赖该方式一次混跑。
+1. [x] 明确版本到 set 的最终映射表。
+2. [x] 修正 `PhalconSetResolver` 的映射逻辑。
+3. [x] 为 `PhalconVersionResolver` 增加可测试注入点，避免测试强依赖真实 Composer 环境。
+4. [x] 新增 `src/Support/Set/ComposerBased/config.php`。
+5. [x] 在 `PhalconSetList` 中增加 `COMPOSER_BASED` 常量。
+6. [x] 扩展 SetList 测试。
+7. [x] 新增 Resolver 单测。
+8. [x] 新增配置集成测试。
+9. [x] 更新 README：增加 Composer-based 用法和限制。
+10. [x] 更新 `plan/PHALCON3_TO_5_PLAN.md`：说明 3 → 5 不依赖该方式一次混跑。
 
 ---
 

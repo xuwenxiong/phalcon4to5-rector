@@ -23,7 +23,7 @@
 建议仍放在当前包中，做成“多规则集”结构：
 
 - `src/Phalcon4/Config/Set/phalcon40.php`：负责 Phalcon 3 → 4。
-- `src/Phalcon5/Config/Set/phalcon50.php`：保持现有 Phalcon 4 → 5，不破坏现有用户。
+- `src/Phalcon5/Config/Set/phalcon50.php`：保持现有 Phalcon 4 → 5 规则集不变。
 
 但有一个关键决策：**3 → 4 规则集不要默认加入 `composer.json` 的 `extra.rector.includes` 自动加载**。
 
@@ -47,7 +47,7 @@ rector 启动
 
 因此推荐策略：
 
-- 默认自动加载仍只保留 4 → 5，兼容现有用户。
+- 默认自动加载仍只保留 4 → 5。
 - 3 → 4 由用户手动在 `rector.php` 中选择 `phalcon40.php`。
 - 未来如需要“一键 3 → 5”，再提供显式入口（如 `phalcon34-to-50.php`），仍不建议默认自动加载。
 
@@ -126,29 +126,28 @@ rector 启动
 
 ## 四、目录与文件规划
 
-建议沿用当前版本化目录习惯，新增一套 `Phalcon4`：
+当前目录结构以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。新增 Phalcon 3 → 4 能力时，沿用已统一的 `src/` 结构：
 
 ```text
-config/
-├── sets/
-│   ├── phalcon40.php        # 新增：Phalcon 3 -> 4
-│   └── phalcon50.php        # 现有：Phalcon 4 -> 5
-
-rules/
-├── Phalcon4/                # 新增
-│   ├── Phalcon4ClassRenames.php
-│   └── Rector/
-│       ├── New_/
-│       ├── StaticCall/
-│       ├── ClassConstFetch/
-│       └── Stmt/
-└── Phalcon5/                # 现有
-
-rules-tests/
-├── Phalcon4/                # 新增
-│   ├── Phalcon40Set/
-│   └── Rector/...           # 与 rules/Phalcon4 镜像
-└── Phalcon5/                # 现有
+src/
+├── Phalcon4/
+│   ├── Config/Set/
+│   │   └── phalcon40.php        # Phalcon 3 → 4 规则集入口
+│   ├── Set/
+│   │   └── Phalcon4SetList.php  # 版本内部 SetList
+│   ├── ClassRenames.php         # 3 → 4 类名映射单一来源
+│   ├── Rector/
+│   │   ├── New_/
+│   │   ├── StaticCall/
+│   │   ├── ClassConstFetch/
+│   │   └── Stmt/
+│   └── Tests/
+│       ├── Phalcon40Set/
+│       └── Rector/...           # 与 Rector/ 镜像
+└── Base/
+    └── Rector/Stmt/
+        ├── AbstractRenameUseImportsRector.php
+        └── AbstractRemovedClassUsageHintRector.php
 ```
 
 现有 `phalcon50.php` 的关键组织方式必须保留：
@@ -160,14 +159,14 @@ rules-tests/
 
 新增 `phalcon40.php` 时沿用同样顺序。
 
-共享能力建议逐步抽象：
+共享能力复用当前结构：
 
-- `PhalconClassRenames`：版本映射表分别是 `Phalcon4ClassRenames` / `Phalcon5ClassRenames`。
-- `PhalconImportShortener`：改成通用能力，按版本映射决定哪些新引入类可以短名化。
-- `RenameUseImportsRector`：抽成共享基础规则，由版本映射表驱动。
-- `RemovedClassUsageHintRector`：抽成共享规则，由版本对应的 removed 清单驱动。
+- `src/Base/Rector/Stmt/AbstractRenameUseImportsRector.php`：版本无关的 `use` 导入改写基类。
+- `src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php`：版本无关的 TODO 提示基类。
+- `src/Phalcon4/ClassRenames.php`：只提供 3 → 4 映射。
+- `src/Phalcon4/ImportShortener.php`：只处理 3 → 4 阶段新引入的 Phalcon 类。
 
-目标是避免复制三份高度相似的实现。
+目标是不复制规则实现，只提供版本差异数据。
 
 ---
 
@@ -211,23 +210,22 @@ extra.rector.includes
 
 ### 命名空间
 
-当前 autoload 使用 `RectorPhalcon\`。继续往这个命名空间下塞 3 → 4 规则会造成语义混乱。
+命名空间已统一为 `RectorPhalcon\`，对应根目录 `src/`，详细结构以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 
-建议单独做一次通用化重构，例如：
-
-```text
-RectorPhalcon\Rector\Phalcon4\...
-RectorPhalcon\Rector\Phalcon5\...
-```
-
-或：
+Phalcon 3 → 4 规则使用：
 
 ```text
-Xuwenxiong\RectorPhalcon\Phalcon4\...
-Xuwenxiong\RectorPhalcon\Phalcon5\...
+RectorPhalcon\Phalcon4\...
+RectorPhalcon\Phalcon4\Tests\...
 ```
 
-为了兼容现有用户，可以保留旧类名的 alias。这个重构建议独立提交，不要和 3 → 4 规则开发混在一起。
+共享抽象基类使用：
+
+```text
+RectorPhalcon\Base\Rector\Stmt\...
+```
+
+不再保留旧命名空间 alias，因为项目尚未正式发布。
 
 ### stubs 依赖
 
@@ -264,36 +262,37 @@ Xuwenxiong\RectorPhalcon\Phalcon5\...
 3. 每条规则重复运行两次无额外 diff（幂等）。
 4. 3 → 4 规则跑在已经迁移到 4.x 的代码上应基本 no-op，不能误伤。
 5. 找真实 Phalcon 3.4 项目执行 `--dry-run`，人工审查 diff，再在测试环境运行应用和测试。
-6. README 明确记录“自动处理”和“必须人工处理”的边界。
+6. `plan/PHALCON3_TO_4_PLAN.md` 明确记录“自动处理”和“必须人工处理”的边界。
 
 ---
 
-## 八、README 需要同步调整
+## 八、文档归属与同步调整
 
-建议把 README 从“Phalcon 4 → 5 工具”升级为“Phalcon 多版本升级工具”。
+README 保持简洁，只保留框架能力概述、运行环境、安装、使用和运行入口。3 → 4 的详细内容放在 plan 中：
 
-需要改的位置：
+- 本文件记录 3 → 4 的规则分层、人工检查项、验收标准和实施顺序。
+- `plan/DIRECTORY_STRUCTURE_PLAN.md` 记录目录结构与命名空间。
+- `plan/PHALCON3_TO_5_PLAN.md` 记录 3 → 5 分阶段直接升级规划。
+- `plan/EXTENSION_INSTALLER_PLAN.md` 记录自动加载原理。
+- `plan/COMPOSER_BASED_PLAN.md` 记录按环境自动选择规则集。
 
-- 标题和项目定位：支持 3 → 4、4 → 5 两套规则集。
-- 使用章节：
-  - 前提仍是已安装 `rector/rector`。
-  - 自动加载说明注明：默认自动加载的是 4 → 5。
-  - 3 → 4 通过手动 set 选择。
-- 新增“升级路径”小节：3.4 → 4.x → 5.x，分阶段执行。
-- 新增“Phalcon 3 → 4 支持的规则”表格，沿用现有“支持规则”的表现方式。
-- 新增“3 → 4 已知限制 / 人工检查清单”，重点列：
-  - Cache
-  - Logger
-  - Session
-  - Filter
-  - `Application::handle()`
-  - `Model::save()`
-  - 已移除组件
-- 开发目录结构树加入：
-  - `src/Phalcon4/Rector/`
-  - `src/Phalcon4/Tests/`
-  - `src/Phalcon4/Config/Set/phalcon40.php`
-- Roadmap 增加 3 → 4 的完成项。
+新增 3 → 4 能力时，需要同步：
+
+- 新增 `src/Phalcon4/Config/Set/phalcon40.php`。
+- 在公共 `PhalconSetList` 中暴露 `UP_PHALCON_3_TO_4`。
+- 在 `plan/PHALCON3_TO_4_PLAN.md` 更新已支持规则与剩余边界。
+- 在 `plan/PHALCON3_TO_5_PLAN.md` 更新 direct-upgrade 的依赖状态。
+- README 只增加必要的入口链接，不重复规则明细。
+
+3 → 4 人工检查清单重点：
+
+- Cache
+- Logger
+- Session
+- Filter
+- `Application::handle()`
+- `Model::save()`
+- 已移除组件
 
 ---
 
@@ -306,7 +305,7 @@ Xuwenxiong\RectorPhalcon\Phalcon5\...
 5. **P1-2**：做 Filter / DB 常量迁移和 `Text → Helper\Str`。
 6. **P1-3**：做 `Model::save([...]) → assign([...]); save()` 这类有固定形态的自定义规则。
 7. **P2**：逐步补 Cache / Logger / Session / Filter 的结构性迁移提示。
-8. **最后**：真实项目验证 + README 完整改版 + 可选的全链路 set。
+8. **最后**：真实项目验证 + plan 文档更新 + 可选的全链路 set。
 
 如果只做最小可用版本，建议范围是：
 

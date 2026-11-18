@@ -1,6 +1,6 @@
 # 项目目录结构与命名空间重构规划
 
-> 状态：规划稿。本文只描述目标结构与迁移顺序，不修改代码。
+> 状态：已实施。本文记录已落地的目标结构与迁移顺序。
 >
 > 前提：项目尚未正式发布，**不需要兼容既有用户、既有类命名空间或既有规则集路径**。因此本规划采用干净切换，不保留旧包装层。
 
@@ -22,7 +22,7 @@ src/Set/
 这种结构在只有 4 → 5 时还能接受，但多版本共存时会带来几个问题：
 
 1. 一个版本的实现分散在多个根目录，定位成本高。
-2. `Phalcon4To5\Rector\`、`Phalcon3To4\Rector\` 等命名空间会继续强化“按源版本命名”的耦合。
+2. `RectorPhalcon\`、`Phalcon3To4\Rector\` 等命名空间会继续强化“按源版本命名”的耦合。
 3. 版本之间复用规则基类时，容易让 `Phalcon4` 依赖 `Phalcon5` 的内部实现。
 4. 新增版本时要同时改多个根目录，扩展成本高。
 
@@ -48,7 +48,7 @@ RectorPhalcon\  →  src/
 不再保留：
 
 ```text
-Phalcon4To5\Rector\
+RectorPhalcon\
 Phalcon3To4\Rector\
 RectorPhalcon\Set\
 ```
@@ -160,8 +160,8 @@ project-root/
 │   │   ├── Set/
 │   │   │   └── Phalcon5SetList.php            # v5 内部常量
 │   │   │
-│   │   ├── ClassRenames.php                   # 原 PhalconClassRenames
-│   │   ├── ImportShortener.php                # 原 PhalconImportShortener
+│   │   ├── ClassRenames.php                   # 原 ClassRenames
+│   │   ├── ImportShortener.php                # 原 ImportShortener
 │   │   │
 │   │   ├── Rector/
 │   │   │   ├── New_/
@@ -255,7 +255,7 @@ PhalconSetList::UP_TO_PHALCON_50
 PhalconSetList::COMPOSER_BASED
 ```
 
-当前 `main` 只实现 `UP_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
+当前分支只实现 `UP_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
 
 ### 5.2 版本内部 SetList
 
@@ -294,7 +294,7 @@ src/Phalcon4/Config/Set/phalcon40.php
 src/Phalcon5/Config/Set/phalcon50.php
 ```
 
-由于不考虑兼容，不保留根 `config/sets/phalcon50.php`。
+由于不考虑兼容，不保留旧的根 `config/sets/phalcon50.php`。
 
 ### 5.4 具体规则实现
 
@@ -312,7 +312,7 @@ RectorPhalcon\Phalcon5\Rector\...
 RectorPhalcon\Phalcon4\Rector\...
 ```
 
-当前代码迁移映射：
+已完成的迁移映射：
 
 | 旧文件 | 新文件 |
 |---|---|
@@ -470,15 +470,15 @@ src/Phalcon4/
 
 1. 移动规则实现：
    ```text
-   rules/Phalcon5/* → src/Phalcon5/Rector 或 src/Phalcon5/*
+   src/Phalcon5/Rector/* → src/Phalcon5/Rector 或 src/Phalcon5/*
    ```
 2. 移动测试：
    ```text
-   rules-tests/Phalcon5/* → src/Phalcon5/Tests/*
+   src/Phalcon5/Tests/* → src/Phalcon5/Tests/*
    ```
 3. 移动 set 配置：
    ```text
-   config/sets/phalcon50.php → src/Phalcon5/Config/Set/phalcon50.php
+   src/Phalcon5/Config/Set/phalcon50.php → src/Phalcon5/Config/Set/phalcon50.php
    ```
 4. 命名空间改为：
    ```text
@@ -516,7 +516,7 @@ src/Support/ValueObject/
 
 1. 移动 Phalcon4 规则到 `src/Phalcon4/Rector/`。
 2. 移动 Phalcon4 测试到 `src/Phalcon4/Tests/`。
-3. 移动 `config/sets/phalcon40.php` 到 `src/Phalcon4/Config/Set/phalcon40.php`。
+3. 移动 `src/Phalcon4/Config/Set/phalcon40.php` 到 `src/Phalcon4/Config/Set/phalcon40.php`。
 4. 命名空间改为 `RectorPhalcon\Phalcon4\...`。
 5. 移除对 `RectorPhalcon\Phalcon5` 具体类的继承，改为继承 Base 抽象基类。
 

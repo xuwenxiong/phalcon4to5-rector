@@ -68,8 +68,10 @@ README 明确提示：项目处于开发测试阶段，生产使用前必须先 
   - `phpunit/phpunit: ^11.5`
   - `rector/rector: ^2.1`
 - 自动加载：
-  - `RectorPhalcon\` → `src`、`rules`
-  - `RectorPhalcon\Tests\` → `rules-tests`
+  - `RectorPhalcon\` → `src`
+  - `RectorPhalcon\Phalcon5\Tests\` → `src/Phalcon5/Tests`
+  - `RectorPhalcon\Set\Tests\` → `src/Set/Tests`
+  - `RectorPhalcon\Support\Tests\` → `src/Support/Tests`
 - 规则集登记：
   - `extra.rector.includes` → `src/Phalcon5/Config/Set/phalcon50.php`
 - 插件白名单：
@@ -94,17 +96,28 @@ rector 启动
 
 因此用户安装本包和插件后，无需在项目 `rector.php` 中手写 `$rectorConfig->sets([...])`。
 
-### 2.3 手动加载
+### 2.3 显式选择规则集
 
-不使用插件时，用户可以在 `rector.php` 中手动引用：
+不使用插件时，用户可以在 `rector.php` 中通过公共 `PhalconSetList` 选择规则集：
 
 ```php
-$rectorConfig->sets([
-    __DIR__ . '/vendor/xuwenxiong/rector-phalcon/src/Phalcon5/Config/Set/phalcon50.php',
-]);
+use RectorPhalcon\Set\PhalconSetList;
+
+return RectorConfig::configure()
+    ->withSets([
+        PhalconSetList::UP_PHALCON_4_TO_5,
+    ]);
 ```
 
-前提是项目已安装 `rector/rector`。
+也可以按项目环境自动选择单个阶段：
+
+```php
+->withSets([
+    PhalconSetList::COMPOSER_BASED,
+])
+```
+
+详见 `plan/COMPOSER_BASED_PLAN.md`。前提是项目已安装 `rector/rector`。
 
 ---
 
@@ -114,11 +127,11 @@ $rectorConfig->sets([
 
 ### 3.1 类与命名空间重命名
 
-使用 Rector 内置 `RenameClassRector`，配置来源是 `PhalconClassRenames::MAP`。
+使用 Rector 内置 `RenameClassRector`，配置来源是 `ClassRenames::MAP`。
 
 重点说明：
 
-- `PhalconClassRenames` 是类重命名的单一数据源。
+- `ClassRenames` 是类重命名的单一数据源。
 - `MAP` 是精确类名映射。
 - `PREFIX_MAP` 是命名空间前缀映射。
 - `resolveNewClass()` 先查精确映射，再按最长前缀匹配。
@@ -165,7 +178,7 @@ $rectorConfig->importNames(false, false);
 - Rector 全局 `importNames()` 会把所有 FQCN 都改成短名并补 `use`。
 - 这会把 `new \PDO()` 变成 `use PDO;`，波及业务类和第三方类。
 - 本包只想改 Phalcon 类。
-- 新引入的 Phalcon 类由 `PhalconImportShortener` 精确补 `use`。
+- 新引入的 Phalcon 类由 `ImportShortener` 精确补 `use`。
 
 ---
 
@@ -445,7 +458,7 @@ use Phalcon\Kernel;
 
 数据来源：
 
-- 与 `RenameClassRector` 共享 `PhalconClassRenames`。
+- 与 `RenameClassRector` 共享 `ClassRenames`。
 - 精确映射：`MAP`
 - 前缀映射：`PREFIX_MAP`
 - 解析入口：`resolveNewClass()`
@@ -475,7 +488,7 @@ use Phalcon\Kernel;
 
 ### 4.4 辅助类
 
-#### `PhalconClassRenames`
+#### `ClassRenames`
 
 职责：
 
@@ -483,7 +496,7 @@ use Phalcon\Kernel;
 - 被 `RenameClassRector` 和 `RenameUseImportsRector` 共享。
 - 避免规则之间映射不一致。
 
-#### `PhalconImportShortener`
+#### `ImportShortener`
 
 职责：
 
@@ -505,29 +518,27 @@ use Phalcon\Kernel;
 ### 5.1 目录结构
 
 ```text
-rules-tests/
-└── Phalcon5/
-    ├── Phalcon50Set/
-    │   ├── Phalcon50SetTest.php
-    │   ├── config/configured_rule.php
-    │   └── Fixture/*.php.inc
-    └── Rector/
-        ├── New_/<RuleName>/
-        ├── StaticCall/<RuleName>/
-        └── Stmt/<RuleName>/
+src/Phalcon5/Tests/
+├── Phalcon50Set/
+│   ├── Phalcon50SetTest.php
+│   ├── config/configured_rule.php
+│   └── Fixture/*.php.inc
+└── Rector/
+    ├── New_/<RuleName>/
+    ├── StaticCall/<RuleName>/
+    └── Stmt/<RuleName>/
 ```
 
-当前统计：
+当前验证基线：
 
-- `Phalcon50Set`：10 个 `.php.inc`，2 个 `.php`。
-- `Rector`：28 个 `.php.inc`，16 个 `.php`。
-- README 记录：PHP 8.4 已验证 20 个测试全绿。
+- PHP 8.4 已验证 56 个测试、68 个断言全绿。
+- 数量包含 4 → 5 规则测试、Composer-based 测试和 SetList 测试。
 
 ### 5.2 测试类型
 
 单规则测试：
 
-- 目录与 `src/Phalcon5/Rector/Rector/` 一一对应。
+- 目录与 `src/Phalcon5/Rector/` 一一对应。
 - 每个规则有自己的 `config/configured_rule.php`，只启用该规则。
 - 继承 `Rector\Testing\PHPUnit\AbstractRectorTestCase`。
 - 使用 `#[DataProvider]` 从 `Fixture/` 读取用例。
@@ -567,7 +578,7 @@ Set-Location "d:\opt\htdocs\rector-phalcon"
 
 ### 6.1 单一映射源
 
-类名映射集中在 `PhalconClassRenames`，避免 `RenameClassRector` 与 `RenameUseImportsRector` 各维护一份表。
+类名映射集中在 `ClassRenames`，避免 `RenameClassRector` 与 `RenameUseImportsRector` 各维护一份表。
 
 收益：
 
@@ -595,7 +606,7 @@ use Phalcon\Loader; new Loader()
 
 规则集关闭全局 `importNames()`。
 
-`PhalconImportShortener` 只对 Phalcon 类补 `use`。
+`ImportShortener` 只对 Phalcon 类补 `use`。
 
 因此：
 
@@ -658,6 +669,16 @@ use Phalcon\Loader; new Loader()
 
 ## 八、Roadmap 与后续计划
 
+### 8.0 通用架构（README 精简后归入本文）
+
+- [x] 统一根命名空间 `RectorPhalcon\` 对应 `src/`。
+- [x] 按目标版本划分目录：`src/Phalcon5/`、未来的 `src/Phalcon4/`。
+- [x] 抽象规则基类放在 `src/Base/`，通用支持代码放在 `src/Support/`。
+- [x] 公共 SetList 常量入口 `RectorPhalcon\Set\PhalconSetList`，后续升级阶段共用同一入口。
+- [x] 当前已实现规则集通过 `extra.rector.includes` 自动加载。
+- [x] 按目标版本自动选择规则集的 Composer-based 配置接入（`PhalconSetList::COMPOSER_BASED`）。
+- [ ] Phalcon 3 → 4、Phalcon 3 → 5 各阶段规则集接入公共入口。
+
 ### 8.1 已完成
 
 - [x] `Phalcon\Tag` 确定性子集 → `Phalcon\Html\TagFactory`。
@@ -689,7 +710,7 @@ use Phalcon\Loader; new Loader()
 
 步骤：
 
-1. 在 `PhalconClassRenames::MAP` 增加精确映射，或在 `PREFIX_MAP` 增加前缀映射。
+1. 在 `src/Phalcon5/ClassRenames.php` 的 `MAP` 增加精确映射，或在 `PREFIX_MAP` 增加前缀映射。
 2. 写单规则 fixture，覆盖：
    - 内联 FQCN。
    - `use` 短名。
@@ -697,7 +718,7 @@ use Phalcon\Loader; new Loader()
    - 别名。
    - docblock。
 3. 跑单规则测试和 `Phalcon50Set` 测试。
-4. 更新 README 的类名映射表。
+4. 更新 `plan/PHALCON4_TO_5_PLAN.md` 的类名映射表。
 
 ### 9.2 新增方法重命名
 
@@ -706,7 +727,7 @@ use Phalcon\Loader; new Loader()
 1. 确认目标方法在 Phalcon 5 stubs 中存在。
 2. 在 `src/Phalcon5/Config/Set/phalcon50.php` 的 `RenameMethodRector` 列表增加 `MethodCallRename`。
 3. 写 fixture，覆盖正常对象调用和无法解析类型时的跳过行为。
-4. 更新 README 的方法重命名表。
+4. 更新 `plan/PHALCON4_TO_5_PLAN.md` 的方法重命名表。
 
 ### 9.3 新增自定义规则
 
@@ -722,14 +743,14 @@ use Phalcon\Loader; new Loader()
    - `getNodeTypes()`
    - `refactor(Node $node)`
    - `getRuleDefinition()`
-4. 如规则新引入 Phalcon 类，通过 `PhalconImportShortener` 补 `use`。
+4. 如规则新引入 Phalcon 类，通过 `ImportShortener` 补 `use`。
 5. 写 fixture：
    - 成功改写。
    - 原样跳过。
    - 重复运行幂等。
 6. 在 `src/Phalcon5/Config/Set/phalcon50.php` 的自定义规则数组中注册。
 7. 必须放在 `RenameClassRector` 之前。
-8. 更新 README 和 Roadmap。
+8. 更新 `plan/PHALCON4_TO_5_PLAN.md` 的规则清单和 Roadmap。
 
 ### 9.4 新增规则时的稳定性检查
 
@@ -738,7 +759,7 @@ use Phalcon\Loader; new Loader()
 - 是否依赖 stubs？如果依赖，文档是否说明？
 - 是否会产生会叠加的注释？
 - 是否在 `Phalcon50Set` 中验证与其他规则协作？
-- 是否更新 README 的“支持的规则”和“已知限制”？
+- 是否更新 `plan/PHALCON4_TO_5_PLAN.md` 的“支持的规则”和“已知限制”？
 
 ---
 
@@ -763,15 +784,15 @@ src/Phalcon5/ImportShortener.php
   - Phalcon 新类精确补 use
   - 非 Phalcon 类保持 FQCN
 
-src/Phalcon5/Rector/Rector/New_/
+src/Phalcon5/Rector/New_/
   - CacheAdapterFactoryConstructorInjectionRector.php
   - AssetsManagerTagFactoryInjectionRector.php
 
-src/Phalcon5/Rector/Rector/StaticCall/
+src/Phalcon5/Rector/StaticCall/
   - TagToTagFactoryRector.php
   - TextAndHelperToSupportHelperRector.php
 
-src/Phalcon5/Rector/Rector/Stmt/
+src/Phalcon5/Rector/Stmt/
   - DeduplicateHelperFactoryRector.php
   - DiBeforeServiceResolveListenerReturnRector.php
   - RemovedClassUsageHintRector.php
@@ -782,7 +803,7 @@ src/Phalcon5/Tests/
   - Rector/
 
 README.md
-  - 使用说明、规则清单、已知限制、Roadmap
+  - 简要使用入口；规则明细见 plan/PHALCON4_TO_5_PLAN.md
 
 phpunit.xml
   - PHPUnit bootstrap 与 testsuite 配置
@@ -804,7 +825,7 @@ phpunit.xml
 - 无确定方案时输出 TODO，不猜测业务意图。
 - fixture 驱动开发，先写失败用例再实现规则。
 - 规则集测试验证多规则协作。
-- README 同步记录规则表、边界和已知限制。
+- `plan/PHALCON4_TO_5_PLAN.md` 同步记录规则表、边界和已知限制。
 
 3 → 4 的详细规划见：
 
