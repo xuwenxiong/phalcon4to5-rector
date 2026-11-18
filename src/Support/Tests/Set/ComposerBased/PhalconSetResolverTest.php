@@ -16,7 +16,7 @@ final class PhalconSetResolverTest extends TestCase
     {
         $resolver = $this->createSetResolver(PhalconVersion::V5);
 
-        $this->assertSame([PhalconSetList::FROM_PHALCON_4_TO_5], $resolver->resolve());
+        $this->assertSame([PhalconSetList::UP_PHALCON_4_TO_5], $resolver->resolve());
     }
 
     public function testPhalcon4IsNoOpUntilRuleSetExists(): void

@@ -14,7 +14,7 @@ final class PhalconSetList
     /**
      * @var string
      */
-    public const FROM_PHALCON_4_TO_5 = Phalcon5SetList::BASELINE;
+    public const UP_PHALCON_4_TO_5 = Phalcon5SetList::BASELINE;
 
     /**
      * Alias in the `UP_TO_*` style used by Rector extension set lists.
@@ -24,7 +24,7 @@ final class PhalconSetList
      *
      * @var string
      */
-    public const UP_TO_PHALCON_50 = self::FROM_PHALCON_4_TO_5;
+    public const UP_TO_PHALCON_50 = self::UP_PHALCON_4_TO_5;
 
     /**
      * Detect the target Phalcon version from the project environment and

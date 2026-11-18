@@ -36,7 +36,7 @@ final class ComposerBasedConfigTest extends TestCase
         $configure(new RectorConfig());
 
         $this->assertContains(
-            PhalconSetList::FROM_PHALCON_4_TO_5,
+            PhalconSetList::UP_PHALCON_4_TO_5,
             SimpleParameterProvider::provideArrayParameter(Option::REGISTERED_RECTOR_SETS)
         );
     }

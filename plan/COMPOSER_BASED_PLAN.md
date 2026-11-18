@@ -21,14 +21,14 @@
 当前用户需要显式选择：
 
 ```php
-PhalconSetList::FROM_PHALCON_4_TO_5
+PhalconSetList::UP_PHALCON_4_TO_5
 ```
 
 未来还会增加：
 
 ```php
-PhalconSetList::FROM_PHALCON_3_TO_4
-PhalconSetList::FROM_PHALCON_5_TO_6
+PhalconSetList::UP_PHALCON_3_TO_4
+PhalconSetList::UP_PHALCON_5_TO_6
 ```
 
 当项目支持多版本升级后，让用户自己判断源版本、目标版本和对应 set，容易出错。
@@ -59,7 +59,7 @@ return RectorConfig::configure()
 | 方式 | 行为 |
 |---|---|
 | `extra.rector.includes` | 固定加载当前默认规则集，当前是 `phalcon50.php` |
-| `PhalconSetList::FROM_PHALCON_4_TO_5` | 用户显式指定一个阶段 |
+| `PhalconSetList::UP_PHALCON_4_TO_5` | 用户显式指定一个阶段 |
 | `PhalconSetList::COMPOSER_BASED` | 根据项目环境自动选择阶段 |
 
 当前自动加载插件是无条件加载：
@@ -145,7 +145,7 @@ src/Support/Set/ComposerBased/config.php
 
 ```text
 探测到目标 Phalcon 5
-  └─ 加载 PhalconSetList::FROM_PHALCON_4_TO_5
+  └─ 加载 PhalconSetList::UP_PHALCON_4_TO_5
 
 其他情况
   └─ 不加载 Phalcon 规则
@@ -278,7 +278,7 @@ src/Support/Set/ComposerBased/PhalconSetResolver.php
 
 注意：
 
-> 当前骨架中的版本到 set 映射需要在正式接入前按本文第四节重新核对，确保探测到 Phalcon 5 时选择 `FROM_PHALCON_4_TO_5`，而不是反过来按源版本判断。
+> 当前骨架中的版本到 set 映射需要在正式接入前按本文第四节重新核对，确保探测到 Phalcon 5 时选择 `UP_PHALCON_4_TO_5`，而不是反过来按源版本判断。
 
 ### 6.4 Composer-based 配置文件
 
@@ -370,7 +370,7 @@ src/Support/Tests/Set/ComposerBased/PhalconSetResolverTest.php
 - `^3.4`、`^4.0`、`^5.0` 解析。
 - 非法版本字符串返回 `null`。
 - 无 Composer 包、无扩展时返回 `null`。
-- 探测到 Phalcon 5 → 返回 `FROM_PHALCON_4_TO_5`。
+- 探测到 Phalcon 5 → 返回 `UP_PHALCON_4_TO_5`。
 - 探测到 Phalcon 4 → 当前阶段 no-op 或未来返回 3 → 4。
 - 探测不到 → 返回空数组。
 
@@ -422,7 +422,7 @@ src/Support/Tests/Set/ComposerBased/ComposerBasedConfigTest.php
 ## 十、验收标准
 
 1. 用户可以使用 `PhalconSetList::COMPOSER_BASED` 配置 Rector。
-2. 探测到 Phalcon 5 时自动选择 `FROM_PHALCON_4_TO_5`。
+2. 探测到 Phalcon 5 时自动选择 `UP_PHALCON_4_TO_5`。
 3. 探测不到版本时 no-op，不报错。
 4. 不会同时加载多个阶段的 set。
 5. 3 → 5 仍由 CLI wrapper 分阶段执行。

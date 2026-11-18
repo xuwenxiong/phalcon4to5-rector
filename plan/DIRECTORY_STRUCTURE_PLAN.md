@@ -249,13 +249,13 @@ src/Set/PhalconSetList.php
 公共常量示例：
 
 ```text
-PhalconSetList::FROM_PHALCON_3_TO_4
-PhalconSetList::FROM_PHALCON_4_TO_5
+PhalconSetList::UP_PHALCON_3_TO_4
+PhalconSetList::UP_PHALCON_4_TO_5
 PhalconSetList::UP_TO_PHALCON_50
 PhalconSetList::COMPOSER_BASED
 ```
 
-当前 `main` 只实现 `FROM_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
+当前 `main` 只实现 `UP_PHALCON_4_TO_5` 及别名；其他常量随对应阶段实现再补。
 
 ### 5.2 版本内部 SetList
 
@@ -574,8 +574,8 @@ src/Phalcon4/Tests
 `src/Set/PhalconSetList.php` 改为引用新路径：
 
 ```text
-FROM_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
-FROM_PHALCON_3_TO_4 → src/Phalcon4/Config/Set/phalcon40.php
+UP_PHALCON_4_TO_5 → src/Phalcon5/Config/Set/phalcon50.php
+UP_PHALCON_3_TO_4 → src/Phalcon4/Config/Set/phalcon40.php
 ```
 
 当前未实现的阶段不提前暴露常量，避免用户误用。
@@ -677,7 +677,7 @@ Upgrade/
 当前阶段仅暴露：
 
 ```text
-FROM_PHALCON_4_TO_5
+UP_PHALCON_4_TO_5
 UP_TO_PHALCON_50
 ```
 

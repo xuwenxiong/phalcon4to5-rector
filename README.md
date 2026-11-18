@@ -60,11 +60,11 @@ return RectorConfig::configure()
         __DIR__ . '/src',
     ])
     ->withSets([
-        PhalconSetList::FROM_PHALCON_4_TO_5,//别名：UP_TO_PHALCON_50
+        PhalconSetList::UP_PHALCON_4_TO_5, // 别名：UP_TO_PHALCON_50
     ]);
 ```
 
-`PhalconSetList::UP_TO_PHALCON_50` 是 `FROM_PHALCON_4_TO_5` 的别名，保持 Rector 扩展常见的 `UP_TO_*` 命名风格。
+`PhalconSetList::UP_TO_PHALCON_50` 是 `UP_PHALCON_4_TO_5` 的别名，保持 Rector 扩展常见的 `UP_TO_*` 命名风格。
 
 这两个常量都指向 `src/Phalcon5/Config/Set/phalcon50.php`，表示“从 Phalcon 4.x 基线升级到 Phalcon 5.x”，不包含 Phalcon 3 → 4。
 
@@ -82,7 +82,7 @@ return RectorConfig::configure()
     ]);
 ```
 
-当前会优先探测 `phalcon/ide-stubs` 版本，再回退到 `phalcon` PHP 扩展版本；探测到目标 Phalcon 5 时加载 `FROM_PHALCON_4_TO_5`，探测不到或目标版本暂无规则集时不加载 Phalcon 规则。它只选择单个升级阶段，不会把多个阶段的规则集合并在一次 Rector 运行中。
+当前会优先探测 `phalcon/ide-stubs` 版本，再回退到 `phalcon` PHP 扩展版本；探测到目标 Phalcon 5 时加载 `UP_PHALCON_4_TO_5`，探测不到或目标版本暂无规则集时不加载 Phalcon 规则。它只选择单个升级阶段，不会把多个阶段的规则集合并在一次 Rector 运行中。
 
 使用 `COMPOSER_BASED` 时同样不要和方式一的自动加载重复叠加。详细设计见 `plan/COMPOSER_BASED_PLAN.md`。
 

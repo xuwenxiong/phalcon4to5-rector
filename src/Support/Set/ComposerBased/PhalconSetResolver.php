@@ -25,7 +25,7 @@ final class PhalconSetResolver
         $version = $this->versionResolver->resolve();
 
         return match ($version) {
-            PhalconVersion::V5 => [PhalconSetList::FROM_PHALCON_4_TO_5],
+            PhalconVersion::V5 => [PhalconSetList::UP_PHALCON_4_TO_5],
             default => [],
         };
     }
