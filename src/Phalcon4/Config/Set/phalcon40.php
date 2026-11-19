@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
+use RectorPhalcon\Phalcon4\Rector\Closure\SessionAdapterDiRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterAddToSetRector;
@@ -16,6 +17,7 @@ use RectorPhalcon\Phalcon4\Rector\Stmt\FilterMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\GetSourceToSetSourceRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\LoggerMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
+use RectorPhalcon\Phalcon4\Rector\StaticCall\SessionFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\SessionMigrationHintRector;
 use Rector\Config\RectorConfig;
@@ -38,6 +40,8 @@ return static function (RectorConfig $rectorConfig): void {
         RemovedClassUsageHintRector::class,
         CacheMigrationHintRector::class,
         LoggerMigrationHintRector::class,
+        SessionFactoryLoadRector::class,
+        SessionAdapterDiRector::class,
         SessionMigrationHintRector::class,
         FilterFactoryNewInstanceRector::class,
         FilterAddToSetRector::class,

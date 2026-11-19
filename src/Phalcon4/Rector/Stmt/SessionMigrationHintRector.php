@@ -6,13 +6,16 @@ namespace RectorPhalcon\Phalcon4\Rector\Stmt;
 
 use PhpParser\Comment;
 use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Expression;
-use PhpParser\Node\Stmt\Use_;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
+use RectorPhalcon\Phalcon4\SessionOptions;
 
 final class SessionMigrationHintRector extends AbstractRector
 {
@@ -21,40 +24,28 @@ final class SessionMigrationHintRector extends AbstractRector
     /**
      * @var string[]
      */
-    private const OLD_CLASSES = [
-        'Phalcon\Session\Factory',
-        'Phalcon\Session\Adapter',
-        'Phalcon\Session\Adapter\Files',
-        'Phalcon\Session\Adapter\Memcache',
-    ];
-
-    /**
-     * @var string[]
-     */
     private const CHECKLIST = [
-        'Replace Phalcon\Session\Factory with Phalcon\Session\Manager (already applied as a class rename).',
-        'Replace old session adapters with Phalcon\Session\Adapter\*: Files became Stream, Memcache became Libmemcached or Redis.',
-        'Register the adapter with Manager::setAdapter() and call Manager::start() instead of relying on the old factory wiring.',
-        'Recheck session name, id, options, and DI service registration.',
+        'Choose Phalcon\Session\Adapter\Libmemcached or Phalcon\Session\Adapter\Redis.',
+        'Build it with Phalcon\Storage\AdapterFactory and Phalcon\Storage\SerializerFactory.',
+        'Convert legacy host/port/persistent options to the v4 servers/client options.',
+        'Register the adapter with Phalcon\Session\Manager::setAdapter() and call Manager::start().',
+        'Ensure the DI session service returns Phalcon\Session\Manager instead of a raw adapter.',
     ];
 
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Add a manual migration checklist to legacy Phalcon 3 Session usages',
+            'Add a TODO for Session usages that cannot be migrated automatically',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
-$session = Phalcon\Session\Factory::load(['adapter' => 'files']);
+$session = Factory::load(['adapter' => 'memcache']);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-// TODO Phalcon v4 Session migration checklist: "Phalcon\Session\Factory"
-// TODO Phalcon v4 Session migration - 1) Replace Phalcon\Session\Factory with Phalcon\Session\Manager (already applied as a class rename).
-// TODO Phalcon v4 Session migration - 2) Replace old session adapters with Phalcon\Session\Adapter\*: Files became Stream, Memcache became Libmemcached or Redis.
-// TODO Phalcon v4 Session migration - 3) Register the adapter with Manager::setAdapter() and call Manager::start() instead of relying on the old factory wiring.
-// TODO Phalcon v4 Session migration - 4) Recheck session name, id, options, and DI service registration.
-$session = Phalcon\Session\Factory::load(['adapter' => 'files']);
+// TODO Phalcon v4 Session migration checklist: "Phalcon\Session\Factory::load with memcache"
+// TODO Phalcon v4 Session migration - 1) Choose Phalcon\Session\Adapter\Libmemcached or Phalcon\Session\Adapter\Redis.
+$session = Factory::load(['adapter' => 'memcache']);
 CODE_SAMPLE
                 ),
             ]
@@ -66,13 +57,13 @@ CODE_SAMPLE
      */
     public function getNodeTypes(): array
     {
-        return [Expression::class, Use_::class];
+        return [Expression::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        $oldClass = $this->matchOldClass($node);
-        if ($oldClass === null) {
+        $reason = $this->matchUnmigratedSession($node);
+        if ($reason === null) {
             return null;
         }
 
@@ -83,11 +74,7 @@ CODE_SAMPLE
             }
         }
 
-        $comments[] = new Comment(sprintf(
-            '// %s checklist: "%s"',
-            self::HINT_MARKER,
-            $oldClass
-        ));
+        $comments[] = new Comment(sprintf('// %s checklist: "%s"', self::HINT_MARKER, $reason));
 
         foreach (self::CHECKLIST as $index => $step) {
             $comments[] = new Comment(sprintf(
@@ -103,37 +90,52 @@ CODE_SAMPLE
         return $node;
     }
 
-    private function matchOldClass(Node $node): ?string
+    private function matchUnmigratedSession(Expression $expression): ?string
     {
-        if ($node instanceof Use_) {
-            foreach ($node->uses as $useItem) {
-                $name = $this->resolveNameString($useItem->name);
-                if ($name !== null && $this->isOldClass($name)) {
-                    return $name;
-                }
-            }
-
-            return null;
-        }
-
         $found = null;
-        $this->traverseNodesWithCallable($node, function (Node $subNode) use (&$found): void {
-            if (! $subNode instanceof Name) {
+        $this->traverseNodesWithCallable($expression, function (Node $node) use (&$found): void {
+            if ($found !== null) {
                 return;
             }
 
-            $name = $this->resolveNameString($subNode);
-            if ($name !== null && $this->isOldClass($name)) {
-                $found ??= $name;
+            if ($node instanceof StaticCall && $this->isOldFactoryLoad($node)) {
+                $args = $node->getArgs();
+                $options = $args[0]->value ?? null;
+                $adapter = $options instanceof Array_ ? SessionOptions::adapterName($options) : null;
+                if ($adapter !== 'files') {
+                    $found = 'Phalcon\Session\Factory::load with non-files options';
+                }
+                return;
+            }
+
+            if ($node instanceof New_ && $this->isOldMemcacheAdapter($node)) {
+                $found = 'Phalcon\Session\Adapter\Memcache';
             }
         });
 
         return $found;
     }
 
-    private function isOldClass(string $name): bool
+    private function isOldFactoryLoad(StaticCall $staticCall): bool
     {
-        return in_array($name, self::OLD_CLASSES, true);
+        if (! $this->isName($staticCall->name, 'load')) {
+            return false;
+        }
+
+        if (! $staticCall->class instanceof Name) {
+            return false;
+        }
+
+        return $this->resolveNameString($staticCall->class) === 'Phalcon\Session\Factory';
+    }
+
+    private function isOldMemcacheAdapter(New_ $new): bool
+    {
+        if (! $new->class instanceof Name) {
+            return false;
+        }
+
+        return $this->resolveNameString($new->class) === 'Phalcon\Session\Adapter\Memcache';
     }
 
     private function resolveNameString(Name $name): ?string

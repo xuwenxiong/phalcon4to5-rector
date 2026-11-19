@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session checklist，以及 Filter 工厂化、`Filter::add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger checklist、Session 工厂化与 DI 服务自动改写、Filter 工厂化、`Filter::add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -379,18 +379,69 @@ checklist 内容：
 
 规则只匹配 `Phalcon\Logger\Multiple` 的导入和使用，不改写代码。`Firephp`、`Syslog` formatter 等仍由通用 removed-class 提示处理。
 
-#### 4.4.5 `SessionMigrationHintRector`
+#### 4.4.5 Session 自动改写族
 
-针对 `Phalcon\Session\Factory`、`Phalcon\Session\Adapter`、`Phalcon\Session\Adapter\Files` 和 `Phalcon\Session\Adapter\Memcache` 输出结构化的 4 步 checklist，并从通用 removed-class 提示中移除 `Memcache`，避免重复 TODO。
+原先只对 Session 输出 checklist，但类映射会把 `Factory::load()` 改成不存在的 `Manager::load()`。因此改为两条自动规则 + 一个缩窄的 TODO 规则。
+
+##### `SessionFactoryLoadRector`
+
+处理 `Phalcon\Session\Factory::load([...])`，并且 `adapter` 是可识别的字面量 `files`。
+
+输入：
+
+```php
+$session = Factory::load([
+    'uniqueId' => 'my-app',
+    'adapter' => 'files',
+    'savePath' => '/tmp',
+]);
+```
+
+输出：
+
+```php
+$session = (new \Phalcon\Session\Manager(['uniqueId' => 'my-app']))
+    ->setAdapter(new \Phalcon\Session\Adapter\Stream(['savePath' => '/tmp']));
+```
+
+`uniqueId` 移入 Manager 构造参数，`adapter` 从 adapter options 中移除，其余选项保留给 Stream。后续 `$session->start()` 保持不变。
+
+##### `SessionAdapterDiRector`
+
+处理 DI closure 中“创建旧 Files adapter → start → return”的固定形态：
+
+```php
+$session = new Files(['uniqueId' => 'my-app', 'savePath' => '/tmp']);
+$session->start();
+return $session;
+```
+
+自动改写为：
+
+```php
+$session = new \Phalcon\Session\Manager(['uniqueId' => 'my-app']);
+$session->setAdapter(new \Phalcon\Session\Adapter\Stream(['savePath' => '/tmp']));
+$session->start();
+return $session;
+```
+
+规则要求同一 closure 中存在 `start()` 和 `return $variable;`，避免误改普通对象创建。
+
+##### `SessionMigrationHintRector`
+
+只保留无法安全自动处理的场景：
+
+- `adapter => 'memcache'`
+- `new Phalcon\Session\Adapter\Memcache(...)`
+- 非数组或动态 options 的 `Factory::load($options)`
 
 checklist 内容：
 
-1. 用 `Phalcon\Session\Manager` 替换 `Phalcon\Session\Factory`。
-2. 用 `Phalcon\Session\Adapter\*` 替换旧 adapter：`Files` → `Stream`，`Memcache` → `Libmemcached` 或 `Redis`。
-3. 用 `Manager::setAdapter()` 注册 adapter，并显式调用 `Manager::start()`，替代旧 factory 装配。
-4. 复核 session name、id、options 以及 DI 服务注册。
-
-规则只输出提示，不改写 wiring。`Factory` → `Manager` 和 `Files` → `Stream` 的确定部分仍由类映射处理；`Memcache` 因目标选择依赖业务环境，只保留 checklist。
+1. 选择 `Phalcon\Session\Adapter\Libmemcached` 或 `Phalcon\Session\Adapter\Redis`。
+2. 用 `Phalcon\Storage\AdapterFactory` 和 `Phalcon\Storage\SerializerFactory` 构造 adapter。
+3. 把旧 `host` / `port` / `persistent` 配置转换为 v4 `servers` / `client`。
+4. 用 `Phalcon\Session\Manager::setAdapter()` 注册 adapter，并调用 `Manager::start()`。
+5. 确认 DI `session` 服务返回 `Phalcon\Session\Manager`，不是原始 adapter。
 
 #### 4.4.6 Filter 自动改写族
 
@@ -523,6 +574,8 @@ src/Phalcon4/Tests/
 │   ├── config/configured_rule.php
 │   └── Fixture/*.php.inc
 └── Rector/
+    ├── Closure/
+    │   └── SessionAdapterDiRector/
     ├── ClassConstFetch/
     │   ├── RenameDbConstFetchRector/
     │   └── RenameFilterConstFetchRector/
@@ -537,6 +590,8 @@ src/Phalcon4/Tests/
     │   └── FilterFactoryNewInstanceRector/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
+    ├── StaticCall/
+    │   └── SessionFactoryLoadRector/
     └── Stmt/
         ├── CacheMigrationHintRector/
         ├── FilterMigrationHintRector/
@@ -549,13 +604,15 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：18 个 `.php.inc`，覆盖 Filter 工厂化、`add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` 自动改写，以及类重命名/常量规则协作。
+- `Phalcon40Set`：18 个 `.php.inc`，覆盖 Session 工厂化与 DI 服务改写、Filter 工厂化、`add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` 自动改写，以及类重命名/常量规则协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
 - `RemovedClassUsageHintRector`：2 个 `.php.inc`
 - `CacheMigrationHintRector`：1 个 `.php.inc`
 - `LoggerMigrationHintRector`：1 个 `.php.inc`
+- `SessionFactoryLoadRector`：1 个 `.php.inc`
+- `SessionAdapterDiRector`：1 个 `.php.inc`
 - `SessionMigrationHintRector`：1 个 `.php.inc`
 - `FilterFactoryNewInstanceRector`：1 个 `.php.inc`
 - `FilterAddToSetRector`：1 个 `.php.inc`
@@ -579,7 +636,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、Filter 工厂化与 sanitizer 字符串改写、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session checklist、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、Filter 工厂化与 sanitizer 字符串改写、Session 工厂化与 DI 服务改写、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger checklist 与 Memcache TODO、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -696,9 +753,10 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Filter 工厂化与 sanitizer 字符串改写、Cache / Logger / Session checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Filter / Session 工厂化与确定形态 DI 服务改写、Cache / Logger checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
 2. 结构性迁移仍以人工确认为主。
-   - Cache、Logger\Multiple、Session 输出 checklist 或 TODO，但不自动重构架构。
+   - Cache、Logger\Multiple 输出 checklist 或 TODO，但不自动重构架构。
+   - Session `files` 场景自动改写；`memcache`、动态 options 和自定义 adapter 仍需人工处理。
    - 带自定义 mapper 的 Filter 构造、复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认；`handle()` URI 只补参数，不修改 DI 注册与路由配置。
 3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 自动补参依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
@@ -759,7 +817,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 - [x] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
 - [x] Logger Multiple → 单 Logger + 多 Adapter 的 TODO/checklist。
-- [x] Session Factory → Manager，以及 Adapter 变化的 TODO/checklist。
+- [x] Session Factory → Manager + Adapter 自动改写；memcache / 动态 options 保留 TODO。
 - [x] Filter 无参构造 → `FilterFactory::newInstance()`；`add()` → `set()`；sanitizer 字符串改写；复杂构造保留 TODO。
 - [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
 - [x] `Application` / `Micro::handle()` 缺少 URI 时自动补参。
@@ -866,8 +924,17 @@ src/Phalcon4/Rector/Stmt/CacheMigrationHintRector.php
 src/Phalcon4/Rector/Stmt/LoggerMigrationHintRector.php
   - 输出 Logger\Multiple → 单 Logger + 多 Adapter 的 4 步 checklist
 
+src/Phalcon4/Rector/StaticCall/SessionFactoryLoadRector.php
+  - Factory::load(files) → Manager + Stream
+
+src/Phalcon4/Rector/Closure/SessionAdapterDiRector.php
+  - DI closure 中 Files adapter 服务 → Manager + Stream
+
+src/Phalcon4/SessionOptions.php
+  - 拆分 uniqueId / adapter / adapter options
+
 src/Phalcon4/Rector/Stmt/SessionMigrationHintRector.php
-  - 输出 Session Factory / Adapter 变化的 4 步 checklist
+  - memcache、动态 options 与非自动场景保留 5 步 TODO
 
 src/Phalcon4/Rector/New_/FilterFactoryNewInstanceRector.php
   - 无参旧 Filter 构造 → FilterFactory::newInstance()
