@@ -6,6 +6,7 @@ use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\Closure\SessionAdapterDiRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
+use RectorPhalcon\Phalcon4\Rector\FunctionLike\LoggerMultipleToLoggerRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterAddToSetRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterSanitizerNameRector;
@@ -20,6 +21,7 @@ use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
 use RectorPhalcon\Phalcon4\Rector\StaticCall\SessionFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\SessionMigrationHintRector;
+use RectorPhalcon\Phalcon4\Rector\StaticCall\LoggerFactoryLoadRector;
 use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\ClassConstFetch\RenameClassConstFetchRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
@@ -39,6 +41,8 @@ return static function (RectorConfig $rectorConfig): void {
     $rectorConfig->rules([
         RemovedClassUsageHintRector::class,
         CacheMigrationHintRector::class,
+        LoggerMultipleToLoggerRector::class,
+        LoggerFactoryLoadRector::class,
         LoggerMigrationHintRector::class,
         SessionFactoryLoadRector::class,
         SessionAdapterDiRector::class,

@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger checklist、Session 工厂化与 DI 服务自动改写、Filter 工厂化、`Filter::add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache checklist、Logger Multiple/Factory 自动改写、Session 工厂化与 DI 服务自动改写、Filter 工厂化、`Filter::add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -341,7 +341,7 @@ DB 侧已复用 `ClassRenames::MAP` 中已有的 `Phalcon\Db` → `Phalcon\Db\Ab
 - ACL：`Phalcon\Acl`
 - Assets filters：`CssMin`、`JsMin`
 - `Phalcon\Image`
-- 旧 Logger adapter/formatter：`Firephp`、`Syslog`（`Logger\Multiple` 改由专项 checklist 处理）
+- 旧 Logger adapter/formatter：`Firephp`、`Syslog`（`Logger\Multiple` 改由专项自动改写 + hint 处理）
 - 旧 Collection behavior/document/manager
 - 旧 Model metadata adapter：`Apc`、`Memcache`、`Session`、`Xcache`
 - `Phalcon\Queue\Beanstalk*`
@@ -366,18 +366,82 @@ checklist 内容：
 
 规则在 `RenameClassRector` 之前运行，因此 checklist 指向原始 Phalcon 3 类名；同一表达式上的类重命名仍会正常执行，例如 `Phalcon\Cache\Backend\File` → `Phalcon\Cache\Adapter\Stream`。
 
-#### 4.4.4 `LoggerMigrationHintRector`
+#### 4.4.4 Logger 自动改写族
 
-针对 `Phalcon\Logger\Multiple` 输出结构化的 4 步 checklist，并从通用 removed-class 提示中移除该类，避免重复 TODO。
+原先只对 `Phalcon\Logger\Multiple` 输出 checklist，且 fixture 中的 `push('file', [...])` 不是 Phalcon 3 的真实 API。Phalcon 3 的 `push()` 接收 adapter 对象，因此改为两条自动规则 + 一个缩窄的 TODO 规则。
+
+##### `LoggerMultipleToLoggerRector`
+
+识别同一函数/方法/闭包中的固定形态：
+
+```php
+$logger = new Multiple();
+$logger->push(new FileAdapter('app.log'));
+$logger->push(new StreamAdapter('php://stdout'));
+```
+
+自动改写为：
+
+```php
+$logger = new \Phalcon\Logger\Logger('messages', [
+    'stream_1' => new \Phalcon\Logger\Adapter\Stream('app.log'),
+    'stream_2' => new \Phalcon\Logger\Adapter\Stream('php://stdout'),
+]);
+```
+
+行为：
+
+- `Multiple` → 单个 `Phalcon\Logger\Logger`
+- 每个受支持的 `push(new Adapter(...))` → Logger 构造参数中的命名 adapter
+- 支持 `File`、`Stream`、`Syslog`、`Blackhole` 到 v4 adapter 的映射；`File` → `Stream`
+- 命名按目标类短名和顺序生成：`stream_1`、`stream_2`
+- 不支持的 `push()` 参数会阻止自动改写，由 hint 规则处理
+
+##### `LoggerFactoryLoadRector`
+
+处理 Phalcon 3：
+
+```php
+Factory::load([
+    'name' => 'app.log',
+    'adapter' => 'file',
+]);
+```
+
+自动改写为 Phalcon 4：
+
+```php
+(new \Phalcon\Logger\LoggerFactory(new \Phalcon\Logger\AdapterFactory()))->load([
+    'name' => 'messages',
+    'options' => [
+        'adapters' => [
+            'main' => [
+                'adapter' => 'stream',
+                'name' => 'app.log',
+            ],
+        ],
+    ],
+]);
+```
+
+支持 adapter 字面量：`file`、`stream`、`syslog`、`blackhole`。动态配置或未知 adapter 名不改写。
+
+##### `LoggerMigrationHintRector`
+
+只输出无法自动处理场景的 5 步 TODO：
+
+- 未被自动规则处理的 `Phalcon\Logger\Multiple`
+- 动态或未知 adapter 的 `Phalcon\Logger\Factory::load()`
 
 checklist 内容：
 
 1. 用单个 `Phalcon\Logger\Logger` 替换 `Phalcon\Logger\Multiple`。
-2. 用 `Phalcon\Logger\AdapterFactory` 或 `Phalcon\Logger\Adapter\*` 创建每个目标，旧的 File adapter 对应 v4 Stream。
-3. 用 `Logger::addAdapter()` / `setAdapters()` 或 `LoggerFactory::newInstance()` 注册 adapter，替代 `Multiple::push()`。
-4. 复核 formatter、log level 以及 transaction/commit 行为。
+2. 把每个 `push()` 目标变成 Logger 构造函数里的命名 adapter。
+3. 用 `Phalcon\Logger\AdapterFactory` 或 `Phalcon\Logger\Adapter\*` 创建 adapter，File 对应 Stream。
+4. 复核 formatter、log level 和每个 adapter 的 options。
+5. 复核 transaction/commit 行为与 DI 服务注册。
 
-规则只匹配 `Phalcon\Logger\Multiple` 的导入和使用，不改写代码。`Firephp`、`Syslog` formatter 等仍由通用 removed-class 提示处理。
+`Firephp`、`Syslog` formatter 等仍由通用 removed-class 提示处理。
 
 #### 4.4.5 Session 自动改写族
 
@@ -581,6 +645,8 @@ src/Phalcon4/Tests/
     │   └── RenameFilterConstFetchRector/
     ├── Expression/
     │   └── ModelSaveWithDataRector/
+    ├── FunctionLike/
+    │   └── LoggerMultipleToLoggerRector/
     ├── MethodCall/
     │   ├── AddHandleUriArgumentRector/
     │   ├── FilterAddToSetRector/
@@ -591,6 +657,7 @@ src/Phalcon4/Tests/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
     ├── StaticCall/
+    │   ├── LoggerFactoryLoadRector/
     │   └── SessionFactoryLoadRector/
     └── Stmt/
         ├── CacheMigrationHintRector/
@@ -604,13 +671,15 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：18 个 `.php.inc`，覆盖 Session 工厂化与 DI 服务改写、Filter 工厂化、`add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` 自动改写，以及类重命名/常量规则协作。
+- `Phalcon40Set`：18 个 `.php.inc`，覆盖 Logger Multiple/Factory 自动改写、Session 工厂化与 DI 服务改写、Filter 工厂化、`add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` 自动改写，以及类重命名/常量规则协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
 - `RemovedClassUsageHintRector`：2 个 `.php.inc`
 - `CacheMigrationHintRector`：1 个 `.php.inc`
 - `LoggerMigrationHintRector`：1 个 `.php.inc`
+- `LoggerMultipleToLoggerRector`：1 个 `.php.inc`
+- `LoggerFactoryLoadRector`：1 个 `.php.inc`
 - `SessionFactoryLoadRector`：1 个 `.php.inc`
 - `SessionAdapterDiRector`：1 个 `.php.inc`
 - `SessionMigrationHintRector`：1 个 `.php.inc`
@@ -636,7 +705,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、Filter 工厂化与 sanitizer 字符串改写、Session 工厂化与 DI 服务改写、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger checklist 与 Memcache TODO、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、Filter 工厂化与 sanitizer 字符串改写、Logger Multiple/Factory 自动改写、Session 工厂化与 DI 服务改写、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache checklist 与 Session Memcache TODO、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -745,7 +814,7 @@ src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 
 ### 6.7 反射依赖最小化
 
-类重命名、`use` 导入改写、TODO 提示以及 Cache / Logger checklist 均由名称或映射表驱动，不依赖反射。
+类重命名、`use` 导入改写、TODO 提示以及 Cache checklist 均由名称或映射表驱动，不依赖反射。Logger Multiple/Factory 自动改写按 AST 结构和字面量配置驱动，不读取目标类定义。
 
 ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源。`RenameCliConsoleAddModulesRector` 需要识别 `Phalcon\Cli\Console` 类型，但不需要读取目标方法定义。Filter / DB 常量重命名按类名和常量名匹配，不读取目标常量定义。`FilterFactoryNewInstanceRector` 只按旧类名改写无参构造，`FilterSanitizerNameRector` 只按方法名、对象类型与字符串字面量改写。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
 
@@ -753,9 +822,10 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Filter / Session 工厂化与确定形态 DI 服务改写、Cache / Logger checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Filter / Session / Logger 工厂化与确定形态 DI 服务改写、Cache checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
 2. 结构性迁移仍以人工确认为主。
-   - Cache、Logger\Multiple 输出 checklist 或 TODO，但不自动重构架构。
+   - Cache 输出 checklist，但不自动重构架构。
+   - Logger `Multiple` + adapter 对象 `push()`、简单 `Factory::load()` 配置自动改写；自定义 adapter、复杂 formatter/transaction 仍保留 TODO。
    - Session `files` 场景自动改写；`memcache`、动态 options 和自定义 adapter 仍需人工处理。
    - 带自定义 mapper 的 Filter 构造、复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认；`handle()` URI 只补参数，不修改 DI 注册与路由配置。
 3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 自动补参依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
@@ -816,7 +886,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 ### 8.3 P2：结构性迁移提示（已完成）
 
 - [x] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
-- [x] Logger Multiple → 单 Logger + 多 Adapter 的 TODO/checklist。
+- [x] Logger Multiple → 单 Logger + 命名 Adapter 自动改写；Factory::load 配置自动转换；复杂场景保留 TODO。
 - [x] Session Factory → Manager + Adapter 自动改写；memcache / 动态 options 保留 TODO。
 - [x] Filter 无参构造 → `FilterFactory::newInstance()`；`add()` → `set()`；sanitizer 字符串改写；复杂构造保留 TODO。
 - [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
@@ -921,8 +991,14 @@ src/Phalcon4/ImportShortener.php
 src/Phalcon4/Rector/Stmt/CacheMigrationHintRector.php
   - 输出 Cache Frontend/Backend → Adapter + Serializer + Cache 的 4 步 checklist
 
+src/Phalcon4/Rector/FunctionLike/LoggerMultipleToLoggerRector.php
+  - Multiple + push(new Adapter(...)) → 单 Logger + 命名 adapters
+
+src/Phalcon4/Rector/StaticCall/LoggerFactoryLoadRector.php
+  - Logger\Factory::load 配置 → LoggerFactory v4 配置
+
 src/Phalcon4/Rector/Stmt/LoggerMigrationHintRector.php
-  - 输出 Logger\Multiple → 单 Logger + 多 Adapter 的 4 步 checklist
+  - 未自动处理的 Multiple / Factory 场景保留 5 步 TODO
 
 src/Phalcon4/Rector/StaticCall/SessionFactoryLoadRector.php
   - Factory::load(files) → Manager + Stream

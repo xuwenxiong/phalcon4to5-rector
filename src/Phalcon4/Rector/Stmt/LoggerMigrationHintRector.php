@@ -6,9 +6,12 @@ namespace RectorPhalcon\Phalcon4\Rector\Stmt;
 
 use PhpParser\Comment;
 use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Scalar\String_;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Expression;
-use PhpParser\Node\Stmt\Use_;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Rector\RuleDoc\CodeSample\CodeSample;
@@ -20,33 +23,44 @@ final class LoggerMigrationHintRector extends AbstractRector
 
     private const OLD_MULTIPLE_CLASS = 'Phalcon\Logger\Multiple';
 
+    private const OLD_FACTORY_CLASS = 'Phalcon\Logger\Factory';
+
+    /**
+     * @var string[]
+     */
+    private const SUPPORTED_FACTORY_ADAPTERS = [
+        'file',
+        'stream',
+        'syslog',
+        'blackhole',
+    ];
+
     /**
      * @var string[]
      */
     private const CHECKLIST = [
         'Replace Phalcon\Logger\Multiple with a single Phalcon\Logger\Logger instance.',
-        'Create each target with Phalcon\Logger\AdapterFactory or a Phalcon\Logger\Adapter\* class (File became Stream).',
-        'Register adapters with Logger::addAdapter()/setAdapters() or LoggerFactory::newInstance() instead of Multiple::push().',
-        'Recheck formatter, log level, and transaction/commit behavior.',
+        'Turn each former push() target into a named adapter in the Logger constructor.',
+        'Create adapters with Phalcon\Logger\AdapterFactory or Phalcon\Logger\Adapter\* classes (File became Stream).',
+        'Recheck formatter, log level, and per-adapter options after the change.',
+        'Recheck transaction/commit behavior and DI service registration.',
     ];
 
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Add a manual migration checklist to Phalcon 3 Logger\Multiple usages',
+            'Add a TODO for Logger usages that cannot be migrated automatically',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
 $logger = new Phalcon\Logger\Multiple();
+$logger->push($unknownAdapter);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
 // TODO Phalcon v4 Logger migration checklist: "Phalcon\Logger\Multiple"
-// TODO Phalcon v4 Logger migration - 1) Replace Phalcon\Logger\Multiple with a single Phalcon\Logger\Logger instance.
-// TODO Phalcon v4 Logger migration - 2) Create each target with Phalcon\Logger\AdapterFactory or a Phalcon\Logger\Adapter\* class (File became Stream).
-// TODO Phalcon v4 Logger migration - 3) Register adapters with Logger::addAdapter()/setAdapters() or LoggerFactory::newInstance() instead of Multiple::push().
-// TODO Phalcon v4 Logger migration - 4) Recheck formatter, log level, and transaction/commit behavior.
 $logger = new Phalcon\Logger\Multiple();
+$logger->push($unknownAdapter);
 CODE_SAMPLE
                 ),
             ]
@@ -58,12 +72,13 @@ CODE_SAMPLE
      */
     public function getNodeTypes(): array
     {
-        return [Expression::class, Use_::class];
+        return [Expression::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        if (! $this->hasOldMultipleClass($node)) {
+        $reason = $this->matchReason($node);
+        if ($reason === null) {
             return null;
         }
 
@@ -74,11 +89,7 @@ CODE_SAMPLE
             }
         }
 
-        $comments[] = new Comment(sprintf(
-            '// %s checklist: "%s"',
-            self::HINT_MARKER,
-            self::OLD_MULTIPLE_CLASS
-        ));
+        $comments[] = new Comment(sprintf('// %s checklist: "%s"', self::HINT_MARKER, $reason));
 
         foreach (self::CHECKLIST as $index => $step) {
             $comments[] = new Comment(sprintf(
@@ -94,35 +105,72 @@ CODE_SAMPLE
         return $node;
     }
 
-    private function hasOldMultipleClass(Node $node): bool
+    private function matchReason(Expression $expression): ?string
     {
-        if ($node instanceof Use_) {
-            foreach ($node->uses as $useItem) {
-                if ($this->isOldMultipleClass($useItem->name)) {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        $found = false;
-        $this->traverseNodesWithCallable($node, function (Node $subNode) use (&$found): void {
-            if (! $subNode instanceof Name) {
+        $found = null;
+        $this->traverseNodesWithCallable($expression, function (Node $node) use (&$found): void {
+            if ($found !== null) {
                 return;
             }
 
-            if ($this->isOldMultipleClass($subNode)) {
-                $found = true;
+            if ($node instanceof New_ && $node->class instanceof Name && $this->isClassName($node->class, self::OLD_MULTIPLE_CLASS)) {
+                $found = self::OLD_MULTIPLE_CLASS;
+                return;
+            }
+
+            if ($node instanceof StaticCall && $this->isOldFactoryLoad($node)) {
+                $args = $node->getArgs();
+                $options = $args[0]->value ?? null;
+                if ($this->isSupportedFactoryConfig($options)) {
+                    return;
+                }
+
+                $found = $options instanceof Array_
+                    ? self::OLD_FACTORY_CLASS . '::load with unsupported config'
+                    : self::OLD_FACTORY_CLASS . '::load with dynamic config';
             }
         });
 
         return $found;
     }
 
-    private function isOldMultipleClass(Name $name): bool
+    private function isSupportedFactoryConfig(mixed $options): bool
     {
-        return $this->resolveNameString($name) === self::OLD_MULTIPLE_CLASS;
+        if (! $options instanceof Array_) {
+            return false;
+        }
+
+        foreach ($options->items as $item) {
+            if ($item === null || ! $item->key instanceof String_ || ! $item->value instanceof String_) {
+                continue;
+            }
+
+            if (strtolower($item->key->value) !== 'adapter') {
+                continue;
+            }
+
+            return in_array(strtolower($item->value->value), self::SUPPORTED_FACTORY_ADAPTERS, true);
+        }
+
+        return false;
+    }
+
+    private function isOldFactoryLoad(StaticCall $staticCall): bool
+    {
+        if (! $this->isName($staticCall->name, 'load')) {
+            return false;
+        }
+
+        if (! $staticCall->class instanceof Name) {
+            return false;
+        }
+
+        return $this->isClassName($staticCall->class, self::OLD_FACTORY_CLASS);
+    }
+
+    private function isClassName(Name $name, string $expected): bool
+    {
+        return $this->resolveNameString($name) === $expected;
     }
 
     private function resolveNameString(Name $name): ?string
