@@ -6,6 +6,7 @@ use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\Closure\SessionAdapterDiRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
+use RectorPhalcon\Phalcon4\Rector\FunctionLike\CacheFrontendBackendToCacheRector;
 use RectorPhalcon\Phalcon4\Rector\FunctionLike\LoggerMultipleToLoggerRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterAddToSetRector;
@@ -18,10 +19,11 @@ use RectorPhalcon\Phalcon4\Rector\Stmt\FilterMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\GetSourceToSetSourceRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\LoggerMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RemovedClassUsageHintRector;
+use RectorPhalcon\Phalcon4\Rector\StaticCall\CacheFactoryLoadRector;
+use RectorPhalcon\Phalcon4\Rector\StaticCall\LoggerFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\StaticCall\SessionFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\SessionMigrationHintRector;
-use RectorPhalcon\Phalcon4\Rector\StaticCall\LoggerFactoryLoadRector;
 use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\ClassConstFetch\RenameClassConstFetchRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
@@ -40,6 +42,8 @@ return static function (RectorConfig $rectorConfig): void {
     // original token positions to preserve inline/short/relative references.
     $rectorConfig->rules([
         RemovedClassUsageHintRector::class,
+        CacheFrontendBackendToCacheRector::class,
+        CacheFactoryLoadRector::class,
         CacheMigrationHintRector::class,
         LoggerMultipleToLoggerRector::class,
         LoggerFactoryLoadRector::class,
@@ -95,6 +99,12 @@ return static function (RectorConfig $rectorConfig): void {
     // The configured classes are Phalcon 4 names: RenameClassRector above has
     // already converted Phalcon 3 references to their v4 equivalents.
     $rectorConfig->ruleWithConfiguration(RenameMethodRector::class, [
+        // Cache (PSR-16)
+        new MethodCallRename('Phalcon\Cache', 'exists', 'has'),
+        new MethodCallRename('Phalcon\Cache', 'save', 'set'),
+        new MethodCallRename('Phalcon\CacheInterface', 'exists', 'has'),
+        new MethodCallRename('Phalcon\CacheInterface', 'save', 'set'),
+
         // ACL
         new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'isResource', 'isComponent'),
         new MethodCallRename('Phalcon\Acl\Adapter\AbstractAdapter', 'addResource', 'addComponent'),

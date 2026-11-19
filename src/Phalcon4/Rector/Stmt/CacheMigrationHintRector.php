@@ -6,13 +6,16 @@ namespace RectorPhalcon\Phalcon4\Rector\Stmt;
 
 use PhpParser\Comment;
 use PhpParser\Node;
+use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\New_;
+use PhpParser\Node\Expr\StaticCall;
 use PhpParser\Node\Name;
 use PhpParser\Node\Stmt\Expression;
-use PhpParser\Node\Stmt\Use_;
 use Rector\NodeTypeResolver\Node\AttributeKey;
 use Rector\Rector\AbstractRector;
 use Rector\RuleDoc\CodeSample\CodeSample;
 use Rector\RuleDoc\RuleDefinition;
+use RectorPhalcon\Phalcon4\CacheOptions;
 
 final class CacheMigrationHintRector extends AbstractRector
 {
@@ -21,30 +24,40 @@ final class CacheMigrationHintRector extends AbstractRector
     /**
      * @var string[]
      */
+    private const UNSUPPORTED_CLASSES = [
+        'phalcon\cache\frontend\output',
+        'phalcon\cache\frontend\factory',
+        'phalcon\cache\backend\apc',
+        'phalcon\cache\backend\memcache',
+        'phalcon\cache\backend\mongo',
+        'phalcon\cache\backend\xcache',
+        'phalcon\cache\multiple',
+    ];
+
+    /**
+     * @var string[]
+     */
     private const CHECKLIST = [
-        'Replace Phalcon\Cache\Frontend\* with Phalcon\Storage\Serializer\* (or the serializer option).',
-        'Replace Phalcon\Cache\Backend\* with Phalcon\Cache\Adapter\*.',
-        'Wrap the adapter and serializer in Phalcon\Cache\Cache or Phalcon\Cache\CacheFactory.',
-        'Recheck TTL, prefix, and get/set/has/delete semantics.',
+        'Choose a v4 adapter: stream, apcu, redis, libmemcached or memory.',
+        'Choose a serializer: legacy data usually maps to php; json/base64/igbinary/msgpack/none map by name.',
+        'Create the adapter with AdapterFactory + SerializerFactory and wrap it in Phalcon\Cache.',
+        'Migrate option keys: cacheDir became storageDir; recheck prefix and lifetime.',
+        'Recheck PSR-16 method changes: exists/save became has/set.',
     ];
 
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Add a manual migration checklist to Phalcon 3 Cache Frontend/Backend usages',
+            'Add a TODO for Cache usages that cannot be migrated automatically',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
-$frontend = new Phalcon\Cache\Frontend\Data(['lifetime' => 3600]);
+$cache = new Phalcon\Cache\Backend\Memcache($frontend, $options);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-// TODO Phalcon v4 Cache migration checklist: "Phalcon\Cache\Frontend\Data"
-// TODO Phalcon v4 Cache migration - 1) Replace Phalcon\Cache\Frontend\* with Phalcon\Storage\Serializer\* (or the serializer option).
-// TODO Phalcon v4 Cache migration - 2) Replace Phalcon\Cache\Backend\* with Phalcon\Cache\Adapter\*.
-// TODO Phalcon v4 Cache migration - 3) Wrap the adapter and serializer in Phalcon\Cache\Cache or Phalcon\Cache\CacheFactory.
-// TODO Phalcon v4 Cache migration - 4) Recheck TTL, prefix, and get/set/has/delete semantics.
-$frontend = new Phalcon\Cache\Frontend\Data(['lifetime' => 3600]);
+// TODO Phalcon v4 Cache migration checklist: "Phalcon\Cache\Backend\Memcache"
+$cache = new Phalcon\Cache\Backend\Memcache($frontend, $options);
 CODE_SAMPLE
                 ),
             ]
@@ -56,13 +69,13 @@ CODE_SAMPLE
      */
     public function getNodeTypes(): array
     {
-        return [Expression::class, Use_::class];
+        return [Expression::class];
     }
 
     public function refactor(Node $node): ?Node
     {
-        $oldCacheClass = $this->matchOldCacheClass($node);
-        if ($oldCacheClass === null) {
+        $reason = $this->matchReason($node);
+        if ($reason === null) {
             return null;
         }
 
@@ -73,11 +86,7 @@ CODE_SAMPLE
             }
         }
 
-        $comments[] = new Comment(sprintf(
-            '// %s checklist: "%s"',
-            self::HINT_MARKER,
-            $oldCacheClass
-        ));
+        $comments[] = new Comment(sprintf('// %s checklist: "%s"', self::HINT_MARKER, $reason));
 
         foreach (self::CHECKLIST as $index => $step) {
             $comments[] = new Comment(sprintf(
@@ -93,41 +102,48 @@ CODE_SAMPLE
         return $node;
     }
 
-    private function matchOldCacheClass(Node $node): ?string
+    private function matchReason(Expression $expression): ?string
     {
-        if ($node instanceof Use_) {
-            foreach ($node->uses as $useItem) {
-                $name = $this->resolveNameString($useItem->name);
-                if ($name !== null && $this->isOldCacheClass($name)) {
-                    return $name;
-                }
-            }
-
-            return null;
-        }
-
         $found = null;
-        $this->traverseNodesWithCallable($node, function (Node $subNode) use (&$found): void {
-            if (! $subNode instanceof Name) {
+        $this->traverseNodesWithCallable($expression, function (Node $node) use (&$found): void {
+            if ($found !== null) {
                 return;
             }
 
-            $name = $this->resolveNameString($subNode);
-            if ($name !== null && $this->isOldCacheClass($name)) {
-                $found ??= $name;
+            if ($node instanceof New_ && $node->class instanceof Name) {
+                $name = $this->resolveNameString($node->class);
+                if ($name !== null && in_array(strtolower($name), self::UNSUPPORTED_CLASSES, true)) {
+                    $found = $name;
+                }
+                return;
+            }
+
+            if ($node instanceof StaticCall && $this->isUnsupportedBackendFactory($node)) {
+                $found = 'Phalcon\Cache\Backend\Factory with unsupported config';
             }
         });
 
         return $found;
     }
 
-    private function isOldCacheClass(string $name): bool
+    private function isUnsupportedBackendFactory(StaticCall $staticCall): bool
     {
-        $lowerName = strtolower($name);
+        if (! $this->isName($staticCall->name, 'load')) {
+            return false;
+        }
 
-        return str_starts_with($lowerName, 'phalcon\cache\frontend\\')
-            || str_starts_with($lowerName, 'phalcon\cache\backend\\')
-            || $lowerName === 'phalcon\cache\multiple';
+        if (! $staticCall->class instanceof Name) {
+            return false;
+        }
+
+        if ($this->resolveNameString($staticCall->class) !== 'Phalcon\Cache\Backend\Factory') {
+            return false;
+        }
+
+        $args = $staticCall->getArgs();
+        $options = $args[0]->value ?? null;
+
+        return ! $options instanceof Array_ || CacheOptions::backendNameFromOptions($options) === null;
     }
 
     private function resolveNameString(Name $name): ?string
