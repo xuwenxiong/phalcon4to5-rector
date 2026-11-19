@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace RectorPhalcon\Phalcon4\Tests\Rector\Expression\ApplicationHandleUriHintRector;
+namespace RectorPhalcon\Phalcon4\Tests\Rector\MethodCall\AddHandleUriArgumentRector;
 
 use Iterator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Rector\Testing\PHPUnit\AbstractRectorTestCase;
 
-final class ApplicationHandleUriHintRectorTest extends AbstractRectorTestCase
+final class AddHandleUriArgumentRectorTest extends AbstractRectorTestCase
 {
     #[DataProvider('provideData')]
     public function test(string $filePath): void

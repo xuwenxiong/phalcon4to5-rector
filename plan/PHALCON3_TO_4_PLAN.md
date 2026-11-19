@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist、`Model::save($data)` 自动改写、`handle()` URI 提示与 `getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -414,17 +414,17 @@ $model->save();
 
 只处理 `Expression` 中的独立方法调用，且要求调用者能被解析为 `Phalcon\Mvc\Model` 或其子类。赋值表达式中的 `save($data)` 不改写，避免改变返回值语义。无参数 `save()` 保持原样。
 
-#### 4.4.8 `ApplicationHandleUriHintRector`
+#### 4.4.8 `AddHandleUriArgumentRector`
 
-对 `Phalcon\Mvc\Application`、`Phalcon\Mvc\Micro` 和 `Phalcon\Application\AbstractApplication` 上无参数的 `handle()` 调用输出 3 步 TODO，不自动补参数。
+对 `Phalcon\Mvc\Application`、`Phalcon\Mvc\Micro` 和 `Phalcon\Application\AbstractApplication` 上无参数的 `handle()` 调用自动补上 URI 参数。
 
-提示内容：
+URI 表达式按以下顺序选择：
 
-1. Phalcon 4 `Application` / `Micro::handle()` 要求显式传入 URI。
-2. 传入 `$request->getURI()` 或其他明确 URI。
-3. 复核 rewrite rules、默认路由与 not-found 处理。
+1. 当前作用域有 `Phalcon\Http\Request` 或 `Phalcon\Http\RequestInterface` 类型的 `$request` 时，补 `$request->getURI()`。
+2. 当前作用域有 `Phalcon\Di\DiInterface` 类型的 `$di` 时，补 `$di->get('request')->getURI()`。
+3. 都没有时，补 `\Phalcon\Di\Di::getDefault()->get('request')->getURI()`。
 
-已有 URI 参数的调用以及无关对象的 `handle()` 会跳过。
+已有 URI 参数的调用以及无关对象的 `handle()` 会跳过。规则只补参数，不修改 DI 注册、rewrite rules 或路由配置；这些仍需人工复核。
 
 #### 4.4.9 `GetSourceToSetSourceRector`
 
@@ -499,9 +499,9 @@ src/Phalcon4/Tests/
     │   ├── RenameDbConstFetchRector/
     │   └── RenameFilterConstFetchRector/
     ├── Expression/
-    │   ├── ApplicationHandleUriHintRector/
     │   └── ModelSaveWithDataRector/
     ├── MethodCall/
+    │   ├── AddHandleUriArgumentRector/
     │   └── RenameCliConsoleAddModulesRector/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
@@ -527,7 +527,7 @@ src/Phalcon4/Tests/
 - `SessionMigrationHintRector`：1 个 `.php.inc`
 - `FilterMigrationHintRector`：1 个 `.php.inc`
 - `GetSourceToSetSourceRector`：1 个 `.php.inc`
-- `ApplicationHandleUriHintRector`：1 个 `.php.inc`
+- `AddHandleUriArgumentRector`：3 个 `.php.inc`
 - `ModelSaveWithDataRector`：1 个 `.php.inc`
 - `RenamePaginatorBeforePropertyRector`：1 个 `.php.inc`
 - `RenameCliConsoleAddModulesRector`：1 个 `.php.inc`
@@ -544,7 +544,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session / Filter / handle URI checklist、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session / Filter checklist、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -630,7 +630,7 @@ use Phalcon\Mvc\Url; new Url()
 - `Phalcon\Acl\Resource` → `Phalcon\Acl\Component` 可自动改。
 - `Phalcon\Cache\Frontend\*` 无确定机械迁移方案，只加 TODO。
 - `Model::save([...])` 依赖业务语义，暂不自动改。
-- `Application::handle()` URI 参数来源不确定，暂不自动改。
+- `Application::handle()` 按 `$request` / `$di` / `Di::getDefault()` 的确定顺序自动补 URI。
 
 ### 6.5 TODO 幂等
 
@@ -661,11 +661,11 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 
 ## 七、已知限制
 
-1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter / handle URI checklist，以及 `Model::save($data)`、`getSource()` → `initialize()` + `setSource()` 自动改写。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
 2. 结构性迁移仍以人工确认为主。
-   - Cache、Logger\Multiple、Session、Filter、`handle()` URI 输出 checklist 或 TODO，但不自动重构架构。
-   - 复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认。
-3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 提示依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
+   - Cache、Logger\Multiple、Session、Filter 输出 checklist 或 TODO，但不自动重构架构。
+   - 复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认；`handle()` URI 只补参数，不修改 DI 注册与路由配置。
+3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 自动补参依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
 6. 3 → 5 直接升级的完整度仍受真实项目验证结果限制。
@@ -727,7 +727,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 - [x] Session Factory → Manager，以及 Adapter 变化的 TODO/checklist。
 - [x] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
 - [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
-- [x] `Application` / `Micro::handle()` 缺少 URI 的人工检查提示。
+- [x] `Application` / `Micro::handle()` 缺少 URI 时自动补参。
 - [x] `getSource()` → `initialize()` + `setSource()` 自动改写；复杂方法保留 TODO。
 
 ### 8.4 验证与发布（待实施）
@@ -841,8 +841,9 @@ src/Phalcon4/Rector/Stmt/GetSourceToSetSourceRector.php
   - 把固定形态 getSource() 改写为 initialize() + setSource()
   - 复杂方法保留人工迁移 TODO
 
-src/Phalcon4/Rector/Expression/ApplicationHandleUriHintRector.php
-  - 输出 handle() 缺少 URI 的 3 步 TODO
+src/Phalcon4/Rector/MethodCall/AddHandleUriArgumentRector.php
+  - 自动为 Application/Micro::handle() 补 URI 参数
+  - 优先使用 $request / $di，回退到 Di::getDefault()
 
 src/Phalcon4/Rector/Expression/ModelSaveWithDataRector.php
   - 把 Model::save($data) 拆成 assign($data) + save()

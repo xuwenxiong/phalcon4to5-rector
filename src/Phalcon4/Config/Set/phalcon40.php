@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
-use RectorPhalcon\Phalcon4\Rector\Expression\ApplicationHandleUriHintRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
+use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
@@ -38,7 +38,7 @@ return static function (RectorConfig $rectorConfig): void {
         SessionMigrationHintRector::class,
         FilterMigrationHintRector::class,
         GetSourceToSetSourceRector::class,
-        ApplicationHandleUriHintRector::class,
+        AddHandleUriArgumentRector::class,
         ModelSaveWithDataRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
