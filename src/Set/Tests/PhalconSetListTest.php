@@ -6,6 +6,7 @@ namespace RectorPhalcon\Set\Tests;
 
 use PHPUnit\Framework\TestCase;
 use RectorPhalcon\Set\PhalconSetList;
+use RectorPhalcon\Set\PhalconStage;
 
 final class PhalconSetListTest extends TestCase
 {
@@ -31,5 +32,18 @@ final class PhalconSetListTest extends TestCase
     {
         $this->assertFileExists(PhalconSetList::COMPOSER_BASED);
         $this->assertSame('config.php', basename(PhalconSetList::COMPOSER_BASED));
+    }
+
+    public function testConstantsForStageListsCanonicalNameAndAlias(): void
+    {
+        $this->assertSame([
+            'RectorPhalcon\Set\PhalconSetList::UP_PHALCON_3_TO_4',
+            'RectorPhalcon\Set\PhalconSetList::UP_TO_PHALCON_40',
+        ], PhalconSetList::constantsForStage(PhalconStage::V3_TO_V4));
+
+        $this->assertSame([
+            'RectorPhalcon\Set\PhalconSetList::UP_PHALCON_4_TO_5',
+            'RectorPhalcon\Set\PhalconSetList::UP_TO_PHALCON_50',
+        ], PhalconSetList::constantsForStage(PhalconStage::V4_TO_V5));
     }
 }

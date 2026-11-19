@@ -21,10 +21,10 @@ use WeakMap;
  */
 final class PhalconStageGuard implements ResettableInterface
 {
-    /** @var WeakMap<RectorConfig, array<string, true>>|null */
+    /** @var WeakMap<RectorConfig, array<string, string>>|null */
     private static ?WeakMap $declaredStages = null;
 
-    public static function declare(RectorConfig $rectorConfig, PhalconStage $stage): void
+    public static function declare(RectorConfig $rectorConfig, PhalconStage $stage, ?string $constantName = null): void
     {
         if (! $rectorConfig->bound(self::class)) {
             $rectorConfig->singleton(self::class);
@@ -34,7 +34,7 @@ final class PhalconStageGuard implements ResettableInterface
             self::$declaredStages = new WeakMap();
         }
 
-        /** @var array<string, true> $declared */
+        /** @var array<string, string> $declared */
         $declared = self::$declaredStages[$rectorConfig] ?? [];
 
         if (isset($declared[$stage->value])) {
@@ -42,19 +42,24 @@ final class PhalconStageGuard implements ResettableInterface
         }
 
         if ($declared !== []) {
-            $previous = array_key_first($declared);
+            $previousStage = array_key_first($declared);
+            $previousConstant = $declared[$previousStage];
+            $currentConstant = $constantName ?? PhalconSetList::constantsForStage($stage)[0];
             throw new InvalidConfigurationException(sprintf(
-                'Cannot load both Phalcon upgrade stages in one Rector run: "%s" and "%s". '
+                'Cannot load both Phalcon upgrade stages in one Rector run: "%s" (%s) and "%s" (%s). '
                 . 'Stage sets are not interchangeable, because 3 -> 4 rewrites Phalcon 5 code back to Phalcon 4. '
-                . 'Run them in two separate processes: first "%s", then "%s".',
-                $previous,
+                . 'Remove one of the conflicting constants from ->withSets() and run the two stages in two '
+                . 'separate processes: first "%s", then "%s".',
+                $previousStage,
+                $previousConstant,
                 $stage->value,
+                $currentConstant,
                 PhalconStage::V3_TO_V4->value,
                 PhalconStage::V4_TO_V5->value
             ));
         }
 
-        $declared[$stage->value] = true;
+        $declared[$stage->value] = $constantName ?? PhalconSetList::constantsForStage($stage)[0];
         self::$declaredStages[$rectorConfig] = $declared;
     }
 

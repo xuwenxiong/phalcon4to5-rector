@@ -15,11 +15,12 @@ use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
 use Rector\Renaming\Rector\Name\RenameClassRector;
 use Rector\Renaming\ValueObject\MethodCallRename;
+use RectorPhalcon\Set\PhalconSetList;
 use RectorPhalcon\Set\PhalconStage;
 use RectorPhalcon\Set\PhalconStageGuard;
 
 return static function (RectorConfig $rectorConfig): void {
-    PhalconStageGuard::declare($rectorConfig, PhalconStage::V4_TO_V5);
+    PhalconStageGuard::declare($rectorConfig, PhalconStage::V4_TO_V5, PhalconSetList::class . '::UP_PHALCON_4_TO_5');
 
     // ---------------------------------------------------------------------
     // 1. Namespace / class renames (biggest breaking change of Phalcon 5)
