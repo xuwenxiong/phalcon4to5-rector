@@ -1,6 +1,6 @@
 # Phalcon 3 → 4 自动升级规则集实施规划
 
-> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session / Filter checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
+> 状态：P0、P1、P2 全部实施。P2 已完成 Cache / Logger / Session checklist，以及 Filter 工厂化、`Filter::add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写；剩余工作集中在真实项目验证与发布准备。
 >
 > 当前目录结构与命名空间以 `plan/DIRECTORY_STRUCTURE_PLAN.md` 为准。
 >
@@ -392,15 +392,43 @@ checklist 内容：
 
 规则只输出提示，不改写 wiring。`Factory` → `Manager` 和 `Files` → `Stream` 的确定部分仍由类映射处理；`Memcache` 因目标选择依赖业务环境，只保留 checklist。
 
-#### 4.4.6 `FilterMigrationHintRector`
+#### 4.4.6 Filter 自动改写族
 
-针对 `new Phalcon\Filter()` 和 `new Phalcon\Filter\Factory()` 输出 4 步 checklist。规则只匹配对象实例化，不会把 `Phalcon\Filter::FILTER_*` 常量引用误判为迁移点。
+原先只对 Filter 输出 checklist，但 Phalcon 4 的 `Phalcon\Filter\Filter` 无参构造不再提供旧默认 sanitizer 集合；只改类名会留下运行时有问题的中间态。因此改为三条自动规则 + 一个缩窄的 TODO 规则。
+
+##### `FilterFactoryNewInstanceRector`
+
+无参 `new Phalcon\Filter()`、`new \Phalcon\Filter()` 和 `new Phalcon\Filter\Factory()` 自动改写为：
+
+```php
+(new \Phalcon\Filter\FilterFactory())->newInstance();
+```
+
+这样 DI closure 中的旧构造也会得到正确的默认 sanitizer mapper。带自定义 mapper 参数的构造不自动替换。
+
+##### `FilterAddToSetRector`
+
+Phalcon 3 的 `$filter->add($name, $service)` 在 Phalcon 4 中变为 `$filter->set($name, $service)`。规则只处理能推断为 `Phalcon\Filter`、`Phalcon\Filter\Filter` 或 `Phalcon\Filter\FilterInterface` 的调用。
+
+##### `FilterSanitizerNameRector`
+
+常量已经由 `RenameClassConstFetchRector` 处理；字符串字面量另行处理，但只在确定上下文中改写：
+
+- `Filter::sanitize($value, 'alphanum')` → `'alnum'`
+- `Filter::sanitize($value, 'double')` → `'float'`
+- `Request::getPost($name, 'alphanum')` → `'alnum'`
+
+调用者需要能推断为 Phalcon Filter / Request 类型，避免误改业务对象的同名字符串参数。
+
+##### `FilterMigrationHintRector`
+
+TODO 只保留给带自定义 mapper 参数的旧 Filter 构造，以及无法安全自动处理的场景。
 
 checklist 内容：
 
-1. 用 `Phalcon\Filter\FilterLocator` 或 `FilterLocatorFactory::newInstance()` 替换直接实例化的旧 Filter 对象。
-2. 只注册需要的 sanitizer；新的 locator 不再假设旧的默认集合。
-3. DI 定义返回 `Phalcon\Filter\FilterLocatorInterface`，不再是旧 filter 对象。
+1. 显式给 `Phalcon\Filter\Filter` 传 sanitizer mapper，或通过 `Phalcon\Filter\FilterFactory::newInstance()` 注册。
+2. Phalcon 4 Filter 不再提供旧默认 sanitizer 集合，逐个复核配置。
+3. DI / 服务类型使用 `Phalcon\Filter\FilterInterface`。
 4. 复核 `sanitize()` 调用与 sanitizer 名称。
 
 #### 4.4.7 `ModelSaveWithDataRector`
@@ -502,7 +530,11 @@ src/Phalcon4/Tests/
     │   └── ModelSaveWithDataRector/
     ├── MethodCall/
     │   ├── AddHandleUriArgumentRector/
+    │   ├── FilterAddToSetRector/
+    │   ├── FilterSanitizerNameRector/
     │   └── RenameCliConsoleAddModulesRector/
+    ├── New_\
+    │   └── FilterFactoryNewInstanceRector/
     ├── PropertyFetch/
     │   └── RenamePaginatorBeforePropertyRector/
     └── Stmt/
@@ -517,7 +549,7 @@ src/Phalcon4/Tests/
 
 当前 fixture：
 
-- `Phalcon40Set`：17 个 `.php.inc`，在此前 13 个基础上新增 `filter_locator_checklist.php.inc`、`model_save_with_data.php.inc`、`application_handle_uri_checklist.php.inc`、`final_get_source_checklist.php.inc`，覆盖剩余 P2 规则与类重命名/常量规则的协作。
+- `Phalcon40Set`：18 个 `.php.inc`，覆盖 Filter 工厂化、`add()` → `set()`、sanitizer 字符串、`Model::save($data)`、`handle()` URI、`getSource()` 自动改写，以及类重命名/常量规则协作。
 - `RenameUseImportsRector`：2 个 `.php.inc`
 - `RenameFilterConstFetchRector`：1 个 `.php.inc`
 - `RenameDbConstFetchRector`：1 个 `.php.inc`
@@ -525,6 +557,9 @@ src/Phalcon4/Tests/
 - `CacheMigrationHintRector`：1 个 `.php.inc`
 - `LoggerMigrationHintRector`：1 个 `.php.inc`
 - `SessionMigrationHintRector`：1 个 `.php.inc`
+- `FilterFactoryNewInstanceRector`：1 个 `.php.inc`
+- `FilterAddToSetRector`：1 个 `.php.inc`
+- `FilterSanitizerNameRector`：1 个 `.php.inc`
 - `FilterMigrationHintRector`：1 个 `.php.inc`
 - `GetSourceToSetSourceRector`：1 个 `.php.inc`
 - `AddHandleUriArgumentRector`：3 个 `.php.inc`
@@ -544,7 +579,7 @@ src/Phalcon4/Tests/
 规则集测试：
 
 - `Phalcon40Set` 加载完整 `src/Phalcon4/Config/Set/phalcon40.php`。
-- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session / Filter checklist、已移除类提示同时发生。
+- 验证多规则协作场景，例如类重命名、`use` 改写、Filter/DB 常量重命名、Filter 工厂化与 sanitizer 字符串改写、ACL/Paginator/CLI 方法重命名、`Text` → `Helper\Str`、Paginator 属性重命名、`Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写、Cache / Logger / Session checklist、已移除类提示同时发生。
 
 ### 5.3 Fixture 约定
 
@@ -655,16 +690,16 @@ src/Base/Rector/Stmt/AbstractRemovedClassUsageHintRector.php
 
 类重命名、`use` 导入改写、TODO 提示以及 Cache / Logger checklist 均由名称或映射表驱动，不依赖反射。
 
-ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源。`RenameCliConsoleAddModulesRector` 需要识别 `Phalcon\Cli\Console` 类型，但不需要读取目标方法定义。Filter / DB 常量重命名按类名和常量名匹配，不读取目标常量定义。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
+ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可解析的 Phalcon 4 类型。`RenamePaginatorBeforePropertyRector` 只需要识别分页结果赋值来源。`RenameCliConsoleAddModulesRector` 需要识别 `Phalcon\Cli\Console` 类型，但不需要读取目标方法定义。Filter / DB 常量重命名按类名和常量名匹配，不读取目标常量定义。`FilterFactoryNewInstanceRector` 只按旧类名改写无参构造，`FilterSanitizerNameRector` 只按方法名、对象类型与字符串字面量改写。`phalcon/ide-stubs:^4.0` CI job 已建立，用户侧也建议在该阶段前切换到该版本 stubs。
 
 ---
 
 ## 七、已知限制
 
-1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Cache / Logger / Session / Filter checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
+1. 当前已实现 P0、P1 与全部 P2 规划规则：机械改写、方法/常量重命名、Filter 工厂化与 sanitizer 字符串改写、Cache / Logger / Session checklist，以及 `Model::save($data)`、`handle()` URI、`getSource()` → `initialize()` + `setSource()` 自动改写。
 2. 结构性迁移仍以人工确认为主。
-   - Cache、Logger\Multiple、Session、Filter 输出 checklist 或 TODO，但不自动重构架构。
-   - 复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认；`handle()` URI 只补参数，不修改 DI 注册与路由配置。
+   - Cache、Logger\Multiple、Session 输出 checklist 或 TODO，但不自动重构架构。
+   - 带自定义 mapper 的 Filter 构造、复杂 `getSource()` 方法只保留 TODO；`Model::save($data)` 的多行/复杂表达式仍需人工确认；`handle()` URI 只补参数，不修改 DI 注册与路由配置。
 3. ACL / Paginator 方法重命名、`Model::save($data)` 和 `handle()` URI 自动补参依赖可解析的 Phalcon 4 类型；无法解析的调用会被跳过。`$before` 属性只在同一函数作用域内能确认来自 Paginator 结果时改写。CI 已覆盖 `^4.0` stubs，本机默认 dev stubs 仍是 `^5.0`。
 4. 官方 4.x 升级页已 deprecated，需以 3.4 → 4.0 cheat sheet 为基线，并用 4.2 / 4.3 回归。
 5. 尚未在真实 Phalcon 3.4 项目完成端到端验证。
@@ -725,7 +760,7 @@ ACL / Paginator 方法重命名使用 `RenameMethodRector`，这部分需要可�
 - [x] Cache Frontend/Backend → Adapter + Serializer + Cache 的 TODO/checklist。
 - [x] Logger Multiple → 单 Logger + 多 Adapter 的 TODO/checklist。
 - [x] Session Factory → Manager，以及 Adapter 变化的 TODO/checklist。
-- [x] Filter 对象 → `FilterLocator` / `FilterLocatorFactory` 的 TODO/checklist。
+- [x] Filter 无参构造 → `FilterFactory::newInstance()`；`add()` → `set()`；sanitizer 字符串改写；复杂构造保留 TODO。
 - [x] `Model::save([...])` → `assign([...]); save()` 的固定形态改写。
 - [x] `Application` / `Micro::handle()` 缺少 URI 时自动补参。
 - [x] `getSource()` → `initialize()` + `setSource()` 自动改写；复杂方法保留 TODO。
@@ -834,8 +869,17 @@ src/Phalcon4/Rector/Stmt/LoggerMigrationHintRector.php
 src/Phalcon4/Rector/Stmt/SessionMigrationHintRector.php
   - 输出 Session Factory / Adapter 变化的 4 步 checklist
 
+src/Phalcon4/Rector/New_/FilterFactoryNewInstanceRector.php
+  - 无参旧 Filter 构造 → FilterFactory::newInstance()
+
+src/Phalcon4/Rector/MethodCall/FilterAddToSetRector.php
+  - Filter::add() → Filter::set()
+
+src/Phalcon4/Rector/MethodCall/FilterSanitizerNameRector.php
+  - Filter/Request 上下文中的旧 sanitizer 字符串 → v4 名称
+
 src/Phalcon4/Rector/Stmt/FilterMigrationHintRector.php
-  - 输出旧 Filter 对象 → FilterLocator 的 4 步 checklist
+  - 带自定义 mapper 的旧 Filter 构造保留 4 步 TODO
 
 src/Phalcon4/Rector/Stmt/GetSourceToSetSourceRector.php
   - 把固定形态 getSource() 改写为 initialize() + setSource()

@@ -6,7 +6,10 @@ use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
+use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterAddToSetRector;
+use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterSanitizerNameRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
+use RectorPhalcon\Phalcon4\Rector\New_\FilterFactoryNewInstanceRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\CacheMigrationHintRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\FilterMigrationHintRector;
@@ -36,6 +39,9 @@ return static function (RectorConfig $rectorConfig): void {
         CacheMigrationHintRector::class,
         LoggerMigrationHintRector::class,
         SessionMigrationHintRector::class,
+        FilterFactoryNewInstanceRector::class,
+        FilterAddToSetRector::class,
+        FilterSanitizerNameRector::class,
         FilterMigrationHintRector::class,
         GetSourceToSetSourceRector::class,
         AddHandleUriArgumentRector::class,

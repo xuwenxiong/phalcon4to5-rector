@@ -21,7 +21,7 @@ final class FilterMigrationHintRector extends AbstractRector
     /**
      * @var string[]
      */
-    private const OLD_CLASSES = [
+    private const LEGACY_CLASSES = [
         'Phalcon\Filter',
         'Phalcon\Filter\Factory',
     ];
@@ -30,29 +30,26 @@ final class FilterMigrationHintRector extends AbstractRector
      * @var string[]
      */
     private const CHECKLIST = [
-        'Replace direct Phalcon\Filter usage with Phalcon\Filter\FilterLocator or FilterLocatorFactory::newInstance().',
-        'Register only the sanitizers you need; the locator no longer assumes the old default set.',
-        'Update DI definitions to return Phalcon\Filter\FilterLocatorInterface instead of the legacy filter object.',
-        'Recheck sanitize() calls and sanitizer names after the locator change.',
+        'Pass a sanitizer mapper explicitly to Phalcon\Filter\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().',
+        'Phalcon 4 Filter does not provide the old default sanitizer set; verify every configured sanitizer.',
+        'Use Phalcon\Filter\FilterInterface as the DI/service type.',
+        'Recheck sanitize() calls and sanitizer names after the change.',
     ];
 
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Add a manual migration checklist to legacy Phalcon 3 Filter usages',
+            'Add a TODO for ambiguous Phalcon 3 Filter constructions',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
-$filter = new Phalcon\Filter();
+$filter = new Phalcon\Filter($mapper);
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
 // TODO Phalcon v4 Filter migration checklist: "Phalcon\Filter"
-// TODO Phalcon v4 Filter migration - 1) Replace direct Phalcon\Filter usage with Phalcon\Filter\FilterLocator or FilterLocatorFactory::newInstance().
-// TODO Phalcon v4 Filter migration - 2) Register only the sanitizers you need; the locator no longer assumes the old default set.
-// TODO Phalcon v4 Filter migration - 3) Update DI definitions to return Phalcon\Filter\FilterLocatorInterface instead of the legacy filter object.
-// TODO Phalcon v4 Filter migration - 4) Recheck sanitize() calls and sanitizer names after the locator change.
-$filter = new Phalcon\Filter();
+// TODO Phalcon v4 Filter migration - 1) Pass a sanitizer mapper explicitly to Phalcon\Filter\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().
+$filter = new Phalcon\Filter($mapper);
 CODE_SAMPLE
                 ),
             ]
@@ -69,8 +66,8 @@ CODE_SAMPLE
 
     public function refactor(Node $node): ?Node
     {
-        $oldClass = $this->matchOldClass($node);
-        if ($oldClass === null) {
+        $legacyClass = $this->matchLegacyConstructionWithArguments($node);
+        if ($legacyClass === null) {
             return null;
         }
 
@@ -84,7 +81,7 @@ CODE_SAMPLE
         $comments[] = new Comment(sprintf(
             '// %s checklist: "%s"',
             self::HINT_MARKER,
-            $oldClass
+            $legacyClass
         ));
 
         foreach (self::CHECKLIST as $index => $step) {
@@ -101,26 +98,21 @@ CODE_SAMPLE
         return $node;
     }
 
-    private function matchOldClass(Node $node): ?string
+    private function matchLegacyConstructionWithArguments(Node $node): ?string
     {
         $found = null;
         $this->traverseNodesWithCallable($node, function (Node $subNode) use (&$found): void {
-            if (! $subNode instanceof New_) {
+            if (! $subNode instanceof New_ || $subNode->getArgs() === []) {
                 return;
             }
 
             $name = $this->resolveNameString($subNode->class);
-            if ($name !== null && $this->isOldClass($name)) {
+            if ($name !== null && in_array($name, self::LEGACY_CLASSES, true)) {
                 $found ??= $name;
             }
         });
 
         return $found;
-    }
-
-    private function isOldClass(string $name): bool
-    {
-        return in_array($name, self::OLD_CLASSES, true);
     }
 
     private function resolveNameString(Name $name): ?string

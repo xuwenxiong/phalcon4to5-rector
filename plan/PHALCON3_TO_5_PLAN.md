@@ -356,7 +356,7 @@ CI 至少分两个 job：
 | `TextAndHelperToSupportHelperRector` | 3 → 4 已实现 `Phalcon\Text` → `Phalcon\Helper\Str`，第二阶段可以看到正确的 Phalcon 4 形态；仍需补充两阶段集成 fixture |
 | `TagToTagFactoryRector` | Phalcon 3/4 都有 `Phalcon\Tag`，但参数语义和 DI 依赖需要中间态验证 |
 | `CacheAdapterFactoryConstructorInjectionRector` | 3 → 4 已输出 Cache 4 步 checklist 并保留可确定的类重命名，但不做架构级自动改写；此 v5 规则仍需人工确认后才可靠 |
-| 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
+| 方法重命名 | 3 → 4 已实现 ACL、Paginator、CLI 子集，以及 Filter `add()` → `set()`；其他方法重命名仍待实施，直接升级会漏掉这些 v3 → v4 方法变更 |
 | 常量重命名 | 3 → 4 已实现 Filter 常量和 DB `FETCH_*` → `Phalcon\Db\Enum`；其他常量迁移仍待实施 |
 
 ### 8.3 不应在同一次运行中混用

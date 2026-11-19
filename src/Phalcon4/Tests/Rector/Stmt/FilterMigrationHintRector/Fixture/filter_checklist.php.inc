@@ -2,15 +2,11 @@
 
 namespace RectorPhalcon\Phalcon4\Tests\Rector\Stmt\FilterMigrationHintRector\Fixture;
 
-use Phalcon\Filter;
-use Phalcon\FilterInterface;
-
 final class SomeClass
 {
-    public function run(FilterInterface $filter): void
+    public function run(array $mapper): void
     {
-        $legacy = new Filter();
-        $value = $filter->sanitize('abc', 'alnum');
+        $legacy = new \Phalcon\Filter($mapper);
     }
 }
 -----
@@ -18,19 +14,15 @@ final class SomeClass
 
 namespace RectorPhalcon\Phalcon4\Tests\Rector\Stmt\FilterMigrationHintRector\Fixture;
 
-use Phalcon\Filter;
-use Phalcon\FilterInterface;
-
 final class SomeClass
 {
-    public function run(FilterInterface $filter): void
+    public function run(array $mapper): void
     {
         // TODO Phalcon v4 Filter migration checklist: "Phalcon\Filter"
-        // TODO Phalcon v4 Filter migration - 1) Replace direct Phalcon\Filter usage with Phalcon\Filter\FilterLocator or FilterLocatorFactory::newInstance().
-        // TODO Phalcon v4 Filter migration - 2) Register only the sanitizers you need; the locator no longer assumes the old default set.
-        // TODO Phalcon v4 Filter migration - 3) Update DI definitions to return Phalcon\Filter\FilterLocatorInterface instead of the legacy filter object.
-        // TODO Phalcon v4 Filter migration - 4) Recheck sanitize() calls and sanitizer names after the locator change.
-        $legacy = new Filter();
-        $value = $filter->sanitize('abc', 'alnum');
+        // TODO Phalcon v4 Filter migration - 1) Pass a sanitizer mapper explicitly to Phalcon\Filter\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().
+        // TODO Phalcon v4 Filter migration - 2) Phalcon 4 Filter does not provide the old default sanitizer set; verify every configured sanitizer.
+        // TODO Phalcon v4 Filter migration - 3) Use Phalcon\Filter\FilterInterface as the DI/service type.
+        // TODO Phalcon v4 Filter migration - 4) Recheck sanitize() calls and sanitizer names after the change.
+        $legacy = new \Phalcon\Filter($mapper);
     }
 }
