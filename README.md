@@ -51,6 +51,9 @@ composer require --dev phalcon/ide-stubs:^4.0
 
 ## 使用
 
+> [!WARNING]
+> **完成 Phalcon 4 → 5 后，禁止再执行 Phalcon 3 → 4。** 阶段 set 不可交换：3 → 4 会把 v5 代码中的 `Phalcon\Mvc\Url` 改回 `Phalcon\Url`，使代码退回 Phalcon 4 中间态。若已误执行，请撤销该次 3 → 4 改动，或重新执行 4 → 5。
+
 本包不通过 `rector/extension-installer` 自动加载规则集，以避免多版本升级阶段被无意识启用。请在 `rector.php` 中选择以下任一方式。
 
 ### 可用规则集常量
