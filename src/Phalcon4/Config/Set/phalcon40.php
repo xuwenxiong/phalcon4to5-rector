@@ -24,6 +24,8 @@ use RectorPhalcon\Phalcon4\Rector\StaticCall\LoggerFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\StaticCall\SessionFactoryLoadRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\RenameUseImportsRector;
 use RectorPhalcon\Phalcon4\Rector\Stmt\SessionMigrationHintRector;
+use Rector\Configuration\Option;
+use Rector\Configuration\Parameter\SimpleParameterProvider;
 use Rector\Config\RectorConfig;
 use Rector\Renaming\Rector\ClassConstFetch\RenameClassConstFetchRector;
 use Rector\Renaming\Rector\MethodCall\RenameMethodRector;
@@ -33,12 +35,16 @@ use Rector\Renaming\ValueObject\MethodCallRename;
 use Rector\Renaming\ValueObject\RenameClassAndConstFetch;
 use Rector\Renaming\ValueObject\RenameClassConstFetch;
 use Rector\Renaming\ValueObject\RenameProperty;
+use RectorPhalcon\Set\Phalcon5SourceGuard;
 use RectorPhalcon\Set\PhalconSetList;
 use RectorPhalcon\Set\PhalconStage;
 use RectorPhalcon\Set\PhalconStageGuard;
 
 return static function (RectorConfig $rectorConfig): void {
     PhalconStageGuard::declare($rectorConfig, PhalconStage::V3_TO_V4, PhalconSetList::class . '::UP_PHALCON_3_TO_4');
+
+    // Block this stage on already-Phalcon-5 source before any file is touched.
+    Phalcon5SourceGuard::guard(SimpleParameterProvider::provideArrayParameter(Option::PATHS));
 
     // ---------------------------------------------------------------------
     // 1. Custom rules — MUST be registered before RenameClassRector

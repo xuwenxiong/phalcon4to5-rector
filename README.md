@@ -109,6 +109,12 @@ return RectorConfig::configure()
 
 同一次运行**不能**同时加载 `UP_PHALCON_3_TO_4` 与 `UP_PHALCON_4_TO_5`（包括各自别名）。配置阶段加载器会在启动时直接抛出 `InvalidConfigurationException`，提示分两个独立进程按顺序执行，而不是静默产生回退改动。`COMPOSER_BASED` 只会选中单个阶段；但若你同时显式配置了另一阶段，同样会被拦下。
 
+### 源码版本保护（3 → 4）
+
+执行 `UP_PHALCON_3_TO_4` 前会扫描待处理源码：若发现 Phalcon 5 独有命名空间（如 `Phalcon\Autoload\Loader`、`Phalcon\Di\Di`、`Phalcon\Filter\Validation`），会直接中止并列出命中的文件，防止把 v5 写法静默改回 v4。该检查在任何文件被修改前执行，命中时不会写入任何改动。
+
+判定基于从阶段重命名表自动推导的 v5 特征集，`Phalcon\Mvc\Url` 这类 v3/v5 共存名不会被误判。若是误报（例如代码里恰好引用了同名类），可设置环境变量 `RECTOR_PHALCON_SKIP_V5_GUARD=1` 跳过该检查。
+
 ## 运行
 
 先预览，再应用：
