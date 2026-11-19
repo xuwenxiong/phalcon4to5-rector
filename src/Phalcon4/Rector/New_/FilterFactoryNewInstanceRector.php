@@ -69,8 +69,12 @@ CODE_SAMPLE
         );
     }
 
-    private function resolveNameString(Name $name): ?string
+    private function resolveNameString(Node $name): ?string
     {
+        if (! $name instanceof Name) {
+            return null;
+        }
+
         $namespacedName = $name->getAttribute(AttributeKey::NAMESPACED_NAME);
         if ($namespacedName instanceof Name) {
             return $namespacedName->toString();
