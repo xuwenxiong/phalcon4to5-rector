@@ -20,6 +20,8 @@ final class Phalcon5SourceGuard
 {
     public const SKIP_ENV = 'RECTOR_PHALCON_SKIP_V5_GUARD';
 
+    private const MAX_LISTED_FILES = 10;
+
     /** @var list<string> */
     private const EXCLUDED_DIRS = ['vendor', 'node_modules', '.git', 'var', 'cache', 'tmp'];
 
@@ -55,20 +57,41 @@ final class Phalcon5SourceGuard
             return;
         }
 
-        $details = [];
-        foreach ($hits as $filePath => $signatures) {
-            $details[] = sprintf('  - %s -> %s', $filePath, implode(', ', $signatures));
-        }
-
         throw new InvalidConfigurationException(sprintf(
             "Cannot run the Phalcon 3 -> 4 stage: the source code is already Phalcon 5.\n"
             . "Running 3 -> 4 on Phalcon 5 code would rewrite v5 names back to v4 (e.g. "
             . "Phalcon\\Mvc\\Url -> Phalcon\\Url).\n"
-            . "Detected Phalcon 5 signatures:\n%s\n"
+            . "Detected Phalcon 5 signatures in %d file(s):\n%s\n"
             . "If this is a false positive, set %s=1 to skip this guard.",
-            implode("\n", $details),
+            count($hits),
+            self::formatHits($hits),
             self::SKIP_ENV
         ));
+    }
+
+    /**
+     * Format detected files, capping the list to keep the error readable.
+     *
+     * @param array<string, list<string>> $hits
+     */
+    public static function formatHits(array $hits): string
+    {
+        $lines = [];
+        $index = 0;
+        foreach ($hits as $filePath => $signatures) {
+            if ($index >= self::MAX_LISTED_FILES) {
+                break;
+            }
+            $lines[] = sprintf('  - %s -> %s', $filePath, implode(', ', $signatures));
+            $index++;
+        }
+
+        $remaining = count($hits) - $index;
+        if ($remaining > 0) {
+            $lines[] = sprintf('  ... and %d more file(s)', $remaining);
+        }
+
+        return implode("\n", $lines);
     }
 
     /**

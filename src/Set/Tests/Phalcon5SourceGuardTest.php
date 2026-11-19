@@ -65,6 +65,35 @@ final class Phalcon5SourceGuardTest extends TestCase
         $this->assertCount(1, Phalcon5SourceGuard::findV5Signatures([$file]));
     }
 
+    public function testFormatHitsListsAllFilesWhenUnderLimit(): void
+    {
+        $formatted = Phalcon5SourceGuard::formatHits([
+            '/a.php' => ['Phalcon\Di\Di'],
+            '/b.php' => ['Phalcon\Autoload\Loader'],
+        ]);
+
+        $this->assertStringContainsString('/a.php', $formatted);
+        $this->assertStringContainsString('/b.php', $formatted);
+        $this->assertStringNotContainsString('more file(s)', $formatted);
+    }
+
+    public function testFormatHitsCapsListAndSummarizesRemainder(): void
+    {
+        $hits = [];
+        for ($i = 1; $i <= 15; $i++) {
+            $hits['/file' . $i . '.php'] = ['Phalcon\Di\Di'];
+        }
+
+        $formatted = Phalcon5SourceGuard::formatHits($hits);
+        $lines = explode("\n", $formatted);
+
+        $this->assertCount(11, $lines); // 10 files + 1 summary
+        $this->assertStringContainsString('/file1.php', $formatted);
+        $this->assertStringContainsString('/file10.php', $formatted);
+        $this->assertStringNotContainsString('/file11.php', $formatted);
+        $this->assertStringContainsString('... and 5 more file(s)', $formatted);
+    }
+
     /** @return string */
     private function makeDir(): string
     {
