@@ -44,4 +44,27 @@ final class PhalconSetList
      * @var string
      */
     public const COMPOSER_BASED = __DIR__ . '/../Support/Set/ComposerBased/config.php';
+
+    /**
+     * Every public set constant that maps to the given upgrade stage.
+     *
+     * Both names of a stage are listed because they are aliases of the same
+     * file: from the loaded set path alone we cannot tell which one the user
+     * wrote in rector.php.
+     *
+     * @return list<string>
+     */
+    public static function constantsForStage(PhalconStage $stage): array
+    {
+        return match ($stage) {
+            PhalconStage::V3_TO_V4 => [
+                self::class . '::UP_PHALCON_3_TO_4',
+                self::class . '::UP_TO_PHALCON_40',
+            ],
+            PhalconStage::V4_TO_V5 => [
+                self::class . '::UP_PHALCON_4_TO_5',
+                self::class . '::UP_TO_PHALCON_50',
+            ],
+        };
+    }
 }
