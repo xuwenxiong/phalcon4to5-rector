@@ -105,6 +105,10 @@ return RectorConfig::configure()
 
 两种方式不要同时叠加使用，否则可能出现意外结果。设计细节见 [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)。
 
+### 阶段互斥保护
+
+同一次运行**不能**同时加载 `UP_PHALCON_3_TO_4` 与 `UP_PHALCON_4_TO_5`（包括各自别名）。配置阶段加载器会在启动时直接抛出 `InvalidConfigurationException`，提示分两个独立进程按顺序执行，而不是静默产生回退改动。`COMPOSER_BASED` 只会选中单个阶段；但若你同时显式配置了另一阶段，同样会被拦下。
+
 ## 运行
 
 先预览，再应用：

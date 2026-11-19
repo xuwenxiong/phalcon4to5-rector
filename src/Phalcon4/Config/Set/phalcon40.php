@@ -33,8 +33,12 @@ use Rector\Renaming\ValueObject\MethodCallRename;
 use Rector\Renaming\ValueObject\RenameClassAndConstFetch;
 use Rector\Renaming\ValueObject\RenameClassConstFetch;
 use Rector\Renaming\ValueObject\RenameProperty;
+use RectorPhalcon\Set\PhalconStage;
+use RectorPhalcon\Set\PhalconStageGuard;
 
 return static function (RectorConfig $rectorConfig): void {
+    PhalconStageGuard::declare($rectorConfig, PhalconStage::V3_TO_V4);
+
     // ---------------------------------------------------------------------
     // 1. Custom rules — MUST be registered before RenameClassRector
     // ---------------------------------------------------------------------
