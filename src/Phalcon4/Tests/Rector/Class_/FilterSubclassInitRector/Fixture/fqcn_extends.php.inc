@@ -15,7 +15,7 @@ namespace RectorPhalcon\Phalcon4\Tests\Rector\Class_\FilterSubclassInitRector\Fi
 
 class FqcnFilter extends \Phalcon\Filter
 {
-    public function init(array $mapper)
+    public function init(array $mapper): void
     {
         parent::init($mapper);
     }

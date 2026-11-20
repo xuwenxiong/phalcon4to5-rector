@@ -22,7 +22,7 @@ use \Phalcon\Filter;
 
 class PhalBaseFilter extends Filter
 {
-    public function init(array $mapper)
+    public function init(array $mapper): void
     {
         parent::init($mapper);
         $this->add('remove_xss', function ($value) {

@@ -25,6 +25,9 @@ use Rector\RuleDoc\RuleDefinition;
  * makes PHP fatal with "Declaration ... must be compatible with
  * Phalcon\Filter::init(array $mapper)". The v4 parent constructor calls
  * init($mapper), so the migrated method must also forward to parent::init().
+ * The void return type is mandatory too: omitting it produces
+ * "must be compatible with Phalcon\Filter::init(array $mapper): void".
+ * Each fix is applied independently so partially migrated code is completed.
  */
 final class FilterSubclassInitRector extends AbstractRector
 {
@@ -49,7 +52,7 @@ CODE_SAMPLE
 use Phalcon\Filter;
 class MyFilter extends Filter
 {
-    public function init(array $mapper)
+    public function init(array $mapper): void
     {
         parent::init($mapper);
         $this->add('custom', $callable);
@@ -83,27 +86,54 @@ CODE_SAMPLE
             if (! $stmt instanceof ClassMethod || ! $this->isName($stmt->name, 'init')) {
                 continue;
             }
-            if ($stmt->params !== []) {
-                continue;
+
+            // 1) Parameter: v3 init() had none; v4 needs array $mapper.
+            if ($stmt->params === []) {
+                $stmt->params[] = new Param(
+                    new Variable('mapper'),
+                    null,
+                    new Identifier('array')
+                );
+                $changed = true;
             }
 
-            $stmt->params[] = new Param(
-                new Variable('mapper'),
-                null,
-                new Identifier('array')
-            );
+            // 2) Return type: v4 parent declares `: void`, so subclasses must too.
+            if ($stmt->returnType === null) {
+                $stmt->returnType = new Identifier('void');
+                $changed = true;
+            }
 
-            $stmt->stmts = array_merge([
-                new Expression(new StaticCall(
-                    new Name('parent'),
-                    new Identifier('init'),
-                    [new Arg(new Variable('mapper'))]
-                )),
-            ], $stmt->stmts ?? []);
-
-            $changed = true;
+            // 3) Forward to parent so built-in sanitizers stay registered.
+            //    Skip when already present (idempotent for partially migrated code).
+            if (! $this->hasParentInitCall($stmt)) {
+                $stmt->stmts = array_merge([
+                    new Expression(new StaticCall(
+                        new Name('parent'),
+                        new Identifier('init'),
+                        [new Arg(new Variable('mapper'))]
+                    )),
+                ], $stmt->stmts ?? []);
+                $changed = true;
+            }
         }
 
         return $changed ? $node : null;
+    }
+
+    private function hasParentInitCall(ClassMethod $classMethod): bool
+    {
+        foreach ($classMethod->stmts ?? [] as $stmt) {
+            if (! $stmt instanceof Expression || ! $stmt->expr instanceof StaticCall) {
+                continue;
+            }
+            if (! $stmt->expr->class instanceof Name || ! $this->isName($stmt->expr->class, 'parent')) {
+                continue;
+            }
+            if ($stmt->expr->name instanceof Identifier && $this->isName($stmt->expr->name, 'init')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
