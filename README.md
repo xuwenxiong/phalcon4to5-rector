@@ -19,7 +19,7 @@
 
 - PHP ^8.1
 - Composer 2.x
-- 项目需安装 `rector/rector:^2.1`
+- rector/rector:^2.8
 
 本项目开发时的环境：
 
@@ -30,7 +30,7 @@
 ## 安装
 
 ```bash
-composer require --dev rector/rector:^2.1
+composer require --dev rector/rector:^2.8
 composer require --dev xuwenxiong/rector-phalcon
 ```
 
