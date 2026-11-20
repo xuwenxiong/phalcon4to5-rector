@@ -122,6 +122,14 @@ CODE_SAMPLE
         }
 
         $variableType = $scope->getVariableType($variableName);
+
+        // Only ObjectType implements isInstanceOf(); when the variable type
+        // cannot be inferred PHPStan returns MixedType (or another non-object
+        // type) that has no such method. Fall back to the default DI lookup.
+        if (! $variableType instanceof ObjectType) {
+            return null;
+        }
+
         foreach ($types as $type) {
             if ($variableType->isInstanceOf($type)->yes()) {
                 return new Variable($variableName);
