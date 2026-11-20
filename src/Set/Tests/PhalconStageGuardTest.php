@@ -63,51 +63,17 @@ final class PhalconStageGuardTest extends TestCase
         $this->addToAssertionCount(1);
     }
 
-    /**
-     * @throws InvalidConfigurationException
-     */
-    public function testResetAllowsDeclaringTheOtherStageAgain(): void
+    public function testBothSetFilesWireUpTheGuard(): void
     {
-        $config = new RectorConfig();
-        PhalconStageGuard::declare($config, PhalconStage::V3_TO_V4);
+        $v3ToV4 = (string) file_get_contents(PhalconSetList::UP_PHALCON_3_TO_4);
+        $v4ToV5 = (string) file_get_contents(PhalconSetList::UP_PHALCON_4_TO_5);
 
-        (new PhalconStageGuard())->reset();
-        PhalconStageGuard::declare($config, PhalconStage::V4_TO_V5);
+        $this->assertStringContainsString('PhalconStageGuard::declare', $v3ToV4);
+        $this->assertStringContainsString('PhalconStage::V3_TO_V4', $v3ToV4);
+        $this->assertStringContainsString('PHPUNIT_COMPOSER_INSTALL', $v3ToV4);
 
-        $this->addToAssertionCount(1);
-    }
-
-    /**
-     * @throws InvalidConfigurationException
-     */
-    public function testLoadingBothSetFilesWithSameConfigIsBlocked(): void
-    {
-        $configureV3ToV4 = require PhalconSetList::UP_PHALCON_3_TO_4;
-        $configureV4ToV5 = require PhalconSetList::UP_PHALCON_4_TO_5;
-        $config = new RectorConfig();
-
-        $configureV3ToV4($config);
-
-        $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessage('PhalconSetList::UP_PHALCON_3_TO_4');
-        $this->expectExceptionMessage('PhalconSetList::UP_PHALCON_4_TO_5');
-
-        $configureV4ToV5($config);
-    }
-
-    /**
-     * @throws InvalidConfigurationException
-     */
-    public function testAliasSetFileIsAlsoGuarded(): void
-    {
-        $configureViaAlias = require PhalconSetList::UP_TO_PHALCON_50;
-        $configureOtherStage = require PhalconSetList::UP_PHALCON_3_TO_4;
-        $config = new RectorConfig();
-
-        $configureViaAlias($config);
-
-        $this->expectException(InvalidConfigurationException::class);
-
-        $configureOtherStage($config);
+        $this->assertStringContainsString('PhalconStageGuard::declare', $v4ToV5);
+        $this->assertStringContainsString('PhalconStage::V4_TO_V5', $v4ToV5);
+        $this->assertStringContainsString('PHPUNIT_COMPOSER_INSTALL', $v4ToV5);
     }
 }

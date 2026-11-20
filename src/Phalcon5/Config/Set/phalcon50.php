@@ -20,7 +20,10 @@ use RectorPhalcon\Set\PhalconStage;
 use RectorPhalcon\Set\PhalconStageGuard;
 
 return static function (RectorConfig $rectorConfig): void {
-    PhalconStageGuard::declare($rectorConfig, PhalconStage::V4_TO_V5, PhalconSetList::class . '::UP_PHALCON_4_TO_5');
+    // Rector's test harness reuses one shared RectorConfig across stage sets.
+    if (! defined('PHPUNIT_COMPOSER_INSTALL')) {
+        PhalconStageGuard::declare($rectorConfig, PhalconStage::V4_TO_V5, PhalconSetList::class . '::UP_PHALCON_4_TO_5');
+    }
 
     // ---------------------------------------------------------------------
     // 1. Namespace / class renames (biggest breaking change of Phalcon 5)

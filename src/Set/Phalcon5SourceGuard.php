@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RectorPhalcon\Set;
 
 use Rector\Exception\Configuration\InvalidConfigurationException;
-use Rector\Testing\PHPUnit\StaticPHPUnitEnvironment;
 
 /**
  * Guards against running the Phalcon 3 -> 4 stage on a project that is already
@@ -31,8 +30,9 @@ final class Phalcon5SourceGuard
     public static function guard(array $paths): void
     {
         // Set-level fixtures and unit tests contain v5 signatures on purpose;
-        // the guard targets real project runs only.
-        if (StaticPHPUnitEnvironment::isPHPUnitRun()) {
+        // the guard targets real project runs only. Use a plain PHP check to
+        // avoid depending on Rector-internal test classes.
+        if (defined('PHPUNIT_COMPOSER_INSTALL')) {
             return;
         }
 

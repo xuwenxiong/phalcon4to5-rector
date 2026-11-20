@@ -157,7 +157,9 @@ vendor/bin/rector-phalcon upgrade:3-to-5 --path src
 
 - 两个阶段 set 文件在闭包开头各声明一次阶段；同一 `RectorConfig` 实例声明到不同阶段时，立即抛 `InvalidConfigurationException`，在任何文件被处理前中止。
 - 异常信息会同时列出冲突的两个配置常量名（如 `PhalconSetList::UP_PHALCON_3_TO_4` 与 `PhalconSetList::UP_PHALCON_4_TO_5`），并提示分两个独立进程按顺序执行，而不是静默产生回退改动。
-- 状态用 `WeakMap` 按 config 实例隔离，并实现 `ResettableInterface` 以适配 Rector 测试基类的 config 复用；别名重复声明同一阶段会被忽略，不误报。
+- 状态用 `WeakMap` 按 config 实例隔离；别名重复声明同一阶段会被忽略，不误报。
+- 不依赖任何 Rector 内部接口（如 `ResettableInterface`），以保证与较低的 Rector 版本兼容；改为在两个 set 文件的 guard 调用处用 `defined('PHPUNIT_COMPOSER_INSTALL')` 检测测试环境并跳过，规避 Rector 测试基类跨测试共享同一 config 造成的误报。
+- 源码版本保护同样改用该纯 PHP 检测，不使用 Rector 内部的 `StaticPHPUnitEnvironment`。
 - `COMPOSER_BASED` 只会选中单个阶段；但若同时显式配置了另一阶段，同样会被拦下。
 
 ### 4.2 源码版本保护（已实现）

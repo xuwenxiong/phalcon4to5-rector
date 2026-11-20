@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace RectorPhalcon\Set;
 
 use Rector\Config\RectorConfig;
-use Rector\Contract\DependencyInjection\ResettableInterface;
 use Rector\Exception\Configuration\InvalidConfigurationException;
 use WeakMap;
 
@@ -16,20 +15,18 @@ use WeakMap;
  * config instance) is checked once, while separate config instances never leak
  * into each other.
  *
- * Implements ResettableInterface so Rector's test harness clears the state when
- * it reuses the shared RectorConfig across test cases of different stage sets.
+ * The set files only call declare() outside PHPUnit: Rector's test harness
+ * reuses one shared RectorConfig across stage sets, which would otherwise
+ * look like a conflict. No Rector-internal test/reset interface is used, to
+ * stay compatible with all supported Rector versions.
  */
-final class PhalconStageGuard implements ResettableInterface
+final class PhalconStageGuard
 {
     /** @var WeakMap<RectorConfig, array<string, string>>|null */
     private static ?WeakMap $declaredStages = null;
 
     public static function declare(RectorConfig $rectorConfig, PhalconStage $stage, ?string $constantName = null): void
     {
-        if (! $rectorConfig->bound(self::class)) {
-            $rectorConfig->singleton(self::class);
-        }
-
         if (self::$declaredStages === null) {
             self::$declaredStages = new WeakMap();
         }
@@ -61,10 +58,5 @@ final class PhalconStageGuard implements ResettableInterface
 
         $declared[$stage->value] = $constantName ?? PhalconSetList::constantsForStage($stage)[0];
         self::$declaredStages[$rectorConfig] = $declared;
-    }
-
-    public function reset(): void
-    {
-        self::$declaredStages = null;
     }
 }

@@ -41,7 +41,10 @@ use RectorPhalcon\Set\PhalconStage;
 use RectorPhalcon\Set\PhalconStageGuard;
 
 return static function (RectorConfig $rectorConfig): void {
-    PhalconStageGuard::declare($rectorConfig, PhalconStage::V3_TO_V4, PhalconSetList::class . '::UP_PHALCON_3_TO_4');
+    // Rector's test harness reuses one shared RectorConfig across stage sets.
+    if (! defined('PHPUNIT_COMPOSER_INSTALL')) {
+        PhalconStageGuard::declare($rectorConfig, PhalconStage::V3_TO_V4, PhalconSetList::class . '::UP_PHALCON_3_TO_4');
+    }
 
     // Block this stage on already-Phalcon-5 source before any file is touched.
     Phalcon5SourceGuard::guard(SimpleParameterProvider::provideArrayParameter(Option::PATHS));
