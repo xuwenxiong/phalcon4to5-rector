@@ -25,6 +25,8 @@ final class GetSourceToSetSourceRector extends AbstractRector
 {
     private const HINT_MARKER = 'TODO Phalcon v4 final getSource()';
 
+    private const CONFLICT_MARKER = 'TODO Phalcon v4 getSource() -> setSource(): an existing setSource() call uses a different argument; please review manually';
+
     /**
      * @var string[]
      */
@@ -114,6 +116,21 @@ CODE_SAMPLE
                 continue;
             }
 
+            $existingCall = $this->findSetSourceCall($stmt);
+            if ($existingCall !== null) {
+                $firstArg = $existingCall->getArgs()[0] ?? null;
+                if ($firstArg !== null && $this->nodeComparator->areNodesEqual($firstArg->value, $sourceExpr)) {
+                    // Already sets the same source — just drop the now-final getSource().
+                    return $node;
+                }
+
+                // Different argument: still migrate, but flag the conflict so the
+                // effective table name is reviewed by a human.
+                $setSourceCall->setAttribute(AttributeKey::COMMENTS, [
+                    new Comment('// ' . self::CONFLICT_MARKER),
+                ]);
+            }
+
             $stmt->stmts = array_merge([$setSourceCall], $stmt->stmts ?? []);
             return $node;
         }
@@ -124,6 +141,27 @@ CODE_SAMPLE
         ]);
 
         return $node;
+    }
+
+    private function findSetSourceCall(ClassMethod $initialize): ?MethodCall
+    {
+        foreach ($initialize->stmts ?? [] as $stmt) {
+            if (! $stmt instanceof Expression || ! $stmt->expr instanceof MethodCall) {
+                continue;
+            }
+
+            $methodCall = $stmt->expr;
+            if (! $methodCall->var instanceof Variable || $methodCall->var->name !== 'this') {
+                continue;
+            }
+            if (! $methodCall->name instanceof Identifier || ! $this->isName($methodCall->name, 'setSource')) {
+                continue;
+            }
+
+            return $methodCall;
+        }
+
+        return null;
     }
 
     private function resolveSourceExpr(ClassMethod $classMethod): ?Node\Expr
