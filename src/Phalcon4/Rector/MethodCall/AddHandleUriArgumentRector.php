@@ -40,7 +40,7 @@ $response = $application->handle();
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$response = $application->handle(\Phalcon\Di\Di::getDefault()->get('request')->getURI());
+$response = $application->handle(\Phalcon\Di::getDefault()->get('request')->getURI());
 CODE_SAMPLE
                 ),
             ]
@@ -106,7 +106,7 @@ CODE_SAMPLE
 
         return new MethodCall(
             new MethodCall(
-                new StaticCall(new FullyQualified('Phalcon\Di\Di'), new Identifier('getDefault')),
+                new StaticCall(new FullyQualified('Phalcon\Di'), new Identifier('getDefault')),
                 new Identifier('get'),
                 [new Arg(new String_('request'))]
             ),

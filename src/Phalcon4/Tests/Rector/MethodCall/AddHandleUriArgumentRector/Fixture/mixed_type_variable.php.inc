@@ -26,6 +26,6 @@ final class MixedTypeVariable
     public function run($request): void
     {
         $application = new Application(new Di());
-        $response = $application->handle(\Phalcon\Di\Di::getDefault()->get('request')->getURI());
+        $response = $application->handle(\Phalcon\Di::getDefault()->get('request')->getURI());
     }
 }
