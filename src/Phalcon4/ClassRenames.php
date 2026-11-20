@@ -62,6 +62,11 @@ final class ClassRenames
         'Phalcon\Db\Adapter\Pdo' => 'Phalcon\Db\Adapter\Pdo\AbstractPdo',
         'Phalcon\Db\Adapter\Pdo\Factory' => 'Phalcon\Db\Adapter\PdoFactory',
 
+        // DI: Phalcon 3 was case-insensitive, so `Phalcon\DI` worked on Windows
+        // but breaks autoloading on case-sensitive filesystems in v4/v5.
+        // Normalize the uppercase variant to the canonical `Phalcon\Di`.
+        'Phalcon\DI' => 'Phalcon\Di',
+
         // Dispatcher
         'Phalcon\Dispatcher' => 'Phalcon\Dispatcher\AbstractDispatcher',
 

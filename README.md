@@ -49,6 +49,8 @@ composer require --dev phalcon/ide-stubs:^4.0
 
 当前 3 → 4 基础规则不强制依赖 stubs，但后续方法重命名需要它做类型解析；`COMPOSER_BASED` 也会用它识别目标版本。
 
+Phalcon 3 对类名大小写不敏感，因此旧代码里可能存在 `\Phalcon\DI::getDefault()` 这类写法——在大小写敏感的文件系统上，v4/v5 会因 autoload 找不到文件而失败。3 → 4 阶段会把 `Phalcon\DI` 规范化为 `Phalcon\Di`（含 `use` 导入、短名和内联全限定调用），后续 4 → 5 阶段再按标准映射迁移到 `Phalcon\Di\Di`。
+
 > 本包 `composer.json` 的 `require-dev` 中固定的 `phalcon/ide-stubs:^5.0` **仅用于本包自身的开发与测试**，不会传递给你的项目。Composer 只传递依赖的 `require`，不传递 `require-dev`，因此你完全可以按上表在自己项目里安装 `^4.0` 或 `^5.0`，与本包无冲突。
 
 ## 使用
