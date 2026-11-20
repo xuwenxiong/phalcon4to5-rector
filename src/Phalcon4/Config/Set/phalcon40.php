@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use RectorPhalcon\Phalcon4\ClassRenames;
 use RectorPhalcon\Phalcon4\DbConstants;
+use RectorPhalcon\Phalcon4\DispatcherConstants;
 use RectorPhalcon\Phalcon4\Rector\Closure\SessionAdapterDiRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
 use RectorPhalcon\Phalcon4\Rector\FunctionLike\CacheFrontendBackendToCacheRector;
@@ -88,6 +89,17 @@ return static function (RectorConfig $rectorConfig): void {
         $dbConstFetchRenames[] = new RenameClassAndConstFetch('Phalcon\Db\AbstractDb', $dbFetchConstant, 'Phalcon\Db\Enum', $dbFetchConstant);
     }
 
+    // Dispatcher exception constants moved to Phalcon\Dispatcher\Exception in v4.
+    // Cover v3 name, its uppercase-insensitive alias, and the v4 intermediate
+    // AbstractDispatcher name (from the class rename) for order-independence.
+    $dispatcherConstFetchRenames = [];
+    foreach (DispatcherConstants::EXCEPTION as $dispatcherConstant) {
+        // v3 source name
+        $dispatcherConstFetchRenames[] = new RenameClassAndConstFetch('Phalcon\Dispatcher', $dispatcherConstant, 'Phalcon\Dispatcher\Exception', $dispatcherConstant);
+        // v4 intermediate name produced by the class rename rule
+        $dispatcherConstFetchRenames[] = new RenameClassAndConstFetch('Phalcon\Dispatcher\AbstractDispatcher', $dispatcherConstant, 'Phalcon\Dispatcher\Exception', $dispatcherConstant);
+    }
+
     $rectorConfig->ruleWithConfiguration(RenameClassConstFetchRector::class, array_merge([
         // Filter: v3 class references must become the v4 class as well, because
         // the new class no longer owns the old constants.
@@ -99,7 +111,7 @@ return static function (RectorConfig $rectorConfig): void {
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_ALPHANUM', 'FILTER_ALNUM'),
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_APHANUM', 'FILTER_ALNUM'),
         new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_SPECIAL_CHARS', 'FILTER_SPECIAL'),
-    ], $dbConstFetchRenames));
+    ], array_merge($dbConstFetchRenames, $dispatcherConstFetchRenames)));
 
     // ---------------------------------------------------------------------
     // 3. Namespace / class renames (Phalcon 3 -> 4)
