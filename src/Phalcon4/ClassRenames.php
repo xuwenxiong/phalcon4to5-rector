@@ -66,6 +66,11 @@ final class ClassRenames
         // but breaks autoloading on case-sensitive filesystems in v4/v5.
         // Normalize the uppercase variant to the canonical `Phalcon\Di`.
         'Phalcon\DI' => 'Phalcon\Di',
+        // In v3 the interface was `Phalcon\DiInterface`; v4 moved it under the
+        // Phalcon\Di namespace. ModuleDefinitionInterface signatures use the
+        // new name, so implementing classes must be updated or PHP fatals with
+        // "Declaration ... must be compatible with ...".
+        'Phalcon\DiInterface' => 'Phalcon\Di\DiInterface',
 
         // Dispatcher
         'Phalcon\Dispatcher' => 'Phalcon\Dispatcher\AbstractDispatcher',
