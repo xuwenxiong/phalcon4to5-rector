@@ -47,18 +47,12 @@ composer require --dev xuwenxiong/rector-phalcon
 composer require --dev phalcon/ide-stubs:^4.0
 ```
 
-当前 3 → 4 基础规则不强制依赖 stubs，但后续方法重命名需要它做类型解析；`COMPOSER_BASED` 也会用它识别目标版本。
-
-Phalcon 3 对类名大小写不敏感，因此旧代码里可能存在 `\Phalcon\DI::getDefault()` 这类写法——在大小写敏感的文件系统上，v4/v5 会因 autoload 找不到文件而失败。3 → 4 阶段会把 `Phalcon\DI` 规范化为 `Phalcon\Di`（含 `use` 导入、短名和内联全限定调用），后续 4 → 5 阶段再按标准映射迁移到 `Phalcon\Di\Di`。
-
 > 本包 `composer.json` 的 `require-dev` 中固定的 `phalcon/ide-stubs:^5.0` **仅用于本包自身的开发与测试**，不会传递给你的项目。Composer 只传递依赖的 `require`，不传递 `require-dev`，因此你完全可以按上表在自己项目里安装 `^4.0` 或 `^5.0`，与本包无冲突。
 
 ## 使用
 
 > [!WARNING]
 > **完成 Phalcon 4 → 5 后，禁止再执行 Phalcon 3 → 4。** 阶段 set 不可交换：3 → 4 会把 v5 代码中的 `Phalcon\Mvc\Url` 改回 `Phalcon\Url`，使代码退回 Phalcon 4 中间态。若已误执行，请撤销该次 3 → 4 改动，或重新执行 4 → 5。
-
-本包不通过 `rector/extension-installer` 自动加载规则集，以避免多版本升级阶段被无意识启用。请在 `rector.php` 中选择以下任一方式。
 
 ### 可用规则集常量
 
@@ -109,25 +103,16 @@ return RectorConfig::configure()
 
 两种方式不要同时叠加使用，否则可能出现意外结果。设计细节见 [`plan/COMPOSER_BASED_PLAN.md`](plan/COMPOSER_BASED_PLAN.md)。
 
-### 阶段互斥保护
-
-同一次运行**不能**同时加载 `UP_PHALCON_3_TO_4` 与 `UP_PHALCON_4_TO_5`（包括各自别名）。配置阶段加载器会在启动时直接抛出 `InvalidConfigurationException`，提示分两个独立进程按顺序执行，而不是静默产生回退改动。`COMPOSER_BASED` 只会选中单个阶段；但若你同时显式配置了另一阶段，同样会被拦下。
-
-### 源码版本保护（3 → 4）
-
-执行 `UP_PHALCON_3_TO_4` 前会扫描待处理源码：若发现 Phalcon 5 独有命名空间（如 `Phalcon\Autoload\Loader`、`Phalcon\Di\Di`、`Phalcon\Filter\Validation`），会直接中止并列出命中的文件，防止把 v5 写法静默改回 v4。该检查在任何文件被修改前执行，命中时不会写入任何改动。
-
-判定基于从阶段重命名表自动推导的 v5 特征集，`Phalcon\Mvc\Url` 这类 v3/v5 共存名不会被误判。若是误报（例如代码里恰好引用了同名类），可设置环境变量 `RECTOR_PHALCON_SKIP_V5_GUARD=1` 跳过该检查。
-
 ## 运行
 
 先预览，再应用：
 
+预览
 ```bash
-# 预览
 vendor/bin/rector process src --dry-run
-
-# 应用
+```
+应用
+```bash
 vendor/bin/rector process src
 ```
 

@@ -151,6 +151,25 @@ vendor/bin/rector-phalcon upgrade:3-to-5 --path src
 
 决策详见 `plan/EXTENSION_INSTALLER_PLAN.md`。
 
+### 4.1 阶段互斥保护（已实现）
+
+同一次运行**不能**同时加载 `UP_PHALCON_3_TO_4` 与 `UP_PHALCON_4_TO_5`（包括各自的 `UP_TO_*` 别名）。这是“两进程两 AST”约束的强制保障，实现在 `src/Set/PhalconStageGuard.php`：
+
+- 两个阶段 set 文件在闭包开头各声明一次阶段；同一 `RectorConfig` 实例声明到不同阶段时，立即抛 `InvalidConfigurationException`，在任何文件被处理前中止。
+- 异常信息会同时列出冲突的两个配置常量名（如 `PhalconSetList::UP_PHALCON_3_TO_4` 与 `PhalconSetList::UP_PHALCON_4_TO_5`），并提示分两个独立进程按顺序执行，而不是静默产生回退改动。
+- 状态用 `WeakMap` 按 config 实例隔离，并实现 `ResettableInterface` 以适配 Rector 测试基类的 config 复用；别名重复声明同一阶段会被忽略，不误报。
+- `COMPOSER_BASED` 只会选中单个阶段；但若同时显式配置了另一阶段，同样会被拦下。
+
+### 4.2 源码版本保护（已实现）
+
+执行 `UP_PHALCON_3_TO_4` 前会扫描待处理源码，防止在已是 Phalcon 5 的代码上误跑 3 → 4（例如把 `Phalcon\Mvc\Url` 静默改回 `Phalcon\Url`）。实现在 `src/Set/Phalcon5SourceGuard.php` 与 `src/Set/Phalcon5Signatures.php`：
+
+- guard 在 3 → 4 set 文件加载阶段执行，早于任何文件处理；命中时抛异常中止整个 Rector 运行，不写入任何改动。
+- v5 特征集从两张 `ClassRenames` 映射表自动推导（v5 目标名 − v3 名 − v4 名），随规则表自动同步；`Phalcon\Mvc\Url` 这类 v3/v5 共存名被排除，不会误判。
+- 命中时标题显示文件总数，最多列出 10 个文件，其余汇总为 `... and N more file(s)`，避免刷屏。
+- 待处理路径优先从 CLI 参数解析（set 加载早于 Rector 设置 `PATHS`），回退到工作目录；排除 `vendor` 等常见目录；PHPUnit 环境自动跳过。
+- 误报时可设置环境变量 `RECTOR_PHALCON_SKIP_V5_GUARD=1` 跳过该检查。
+
 ---
 
 ## 五、入口形态选择
