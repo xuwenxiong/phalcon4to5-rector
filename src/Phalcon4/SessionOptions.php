@@ -20,6 +20,11 @@ final class SessionOptions
         return strtolower($adapterItem->value->value);
     }
 
+    public static function hasSavePath(Array_ $options): bool
+    {
+        return self::findItem($options, 'savePath') !== null;
+    }
+
     /**
      * @return array{0: Array_|null, 1: Array_}
      */

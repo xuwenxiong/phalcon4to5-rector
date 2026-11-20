@@ -8,6 +8,7 @@ use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Expr\Array_;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\MethodCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\StaticCall;
@@ -75,8 +76,15 @@ CODE_SAMPLE
 
         [$managerOptions, $adapterOptions] = SessionOptions::split($options);
 
+        if (! SessionOptions::hasSavePath($adapterOptions)) {
+            $adapterOptions->items[] = new \PhpParser\Node\Expr\ArrayItem(
+                new FuncCall(new FullyQualified('sys_get_temp_dir')),
+                new \PhpParser\Node\Scalar\String_('savePath')
+            );
+        }
+
         $managerArgs = $managerOptions === null ? [] : [new Arg($managerOptions)];
-        $adapterArgs = $adapterOptions->items === [] ? [] : [new Arg($adapterOptions)];
+        $adapterArgs = [new Arg($adapterOptions)];
 
         return new MethodCall(
             new New_(new FullyQualified('Phalcon\Session\Manager'), $managerArgs),

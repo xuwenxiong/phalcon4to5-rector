@@ -42,7 +42,8 @@ final class SomeClass
 
         $di->setShared('session', function () {
             $service = new \Phalcon\Session\Manager(['uniqueId' => 'service-app']);
-            $service->setAdapter(new \Phalcon\Session\Adapter\Stream());
+            // TODO Phalcon v4 session: savePath defaulted to sys_get_temp_dir(); confirm it is writable and correct for your deployment
+            $service->setAdapter(new \Phalcon\Session\Adapter\Stream(['savePath' => \sys_get_temp_dir()]));
             $service->start();
             return $service;
         });

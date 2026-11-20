@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace RectorPhalcon\Phalcon4\Rector\Closure;
 
+use PhpParser\Comment;
 use PhpParser\Node;
 use PhpParser\Node\Arg;
 use PhpParser\Node\Expr\Array_;
 use PhpParser\Node\Expr\Assign;
 use PhpParser\Node\Expr\Closure;
 use PhpParser\Node\Expr\MethodCall;
+use PhpParser\Node\Expr\FuncCall;
 use PhpParser\Node\Expr\New_;
 use PhpParser\Node\Expr\Variable;
 use PhpParser\Node\Identifier;
@@ -116,8 +118,18 @@ CODE_SAMPLE
             return null;
         }
 
+        $needsSavePath = ! SessionOptions::hasSavePath($adapterOptions);
+        if ($needsSavePath) {
+            // v3 Files with no options fell back to session_save_path(). v4
+            // Stream throws when savePath is empty, so provide a safe default.
+            $adapterOptions->items[] = new \PhpParser\Node\Expr\ArrayItem(
+                new FuncCall(new FullyQualified('sys_get_temp_dir')),
+                new \PhpParser\Node\Scalar\String_('savePath')
+            );
+        }
+
         $managerArgs = $managerOptions === null ? [] : [new Arg($managerOptions)];
-        $adapterArgs = $adapterOptions->items === [] ? [] : [new Arg($adapterOptions)];
+        $adapterArgs = [new Arg($adapterOptions)];
         $assign->expr->expr = new New_(new FullyQualified('Phalcon\Session\Manager'), $managerArgs);
 
         $setAdapter = new Expression(new MethodCall(
@@ -125,6 +137,12 @@ CODE_SAMPLE
             new Identifier('setAdapter'),
             [new Arg(new New_(new FullyQualified('Phalcon\Session\Adapter\Stream'), $adapterArgs))]
         ));
+
+        if ($needsSavePath) {
+            $setAdapter->setAttribute(AttributeKey::COMMENTS, [
+                new Comment('// TODO Phalcon v4 session: savePath defaulted to sys_get_temp_dir(); confirm it is writable and correct for your deployment'),
+            ]);
+        }
 
         array_splice($node->stmts, $assignPosition + 1, 0, [$setAdapter]);
 
