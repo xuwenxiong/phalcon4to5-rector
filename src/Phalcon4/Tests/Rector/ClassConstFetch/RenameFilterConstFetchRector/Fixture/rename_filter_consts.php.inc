@@ -25,9 +25,9 @@ final class SomeClass
 {
     public function run(): void
     {
-        $alnum = \Phalcon\Filter\Filter::FILTER_ALNUM;
-        $special = \Phalcon\Filter\Filter::FILTER_SPECIAL;
-        $legacyTypo = \Phalcon\Filter\Filter::FILTER_ALNUM;
+        $alnum = Filter::FILTER_ALNUM;
+        $special = Filter::FILTER_SPECIAL;
+        $legacyTypo = \Phalcon\Filter::FILTER_ALNUM;
         $other = SomeService::FILTER_ALPHANUM;
     }
 }

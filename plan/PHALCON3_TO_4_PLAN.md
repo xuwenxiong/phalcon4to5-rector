@@ -221,7 +221,7 @@ $rectorConfig->importNames(false, false);
 | Cache | `Phalcon\Cache\Backend\File` → `Phalcon\Cache\Adapter\Stream` |
 | Config | `Phalcon\Config\Factory` → `Phalcon\Config\ConfigFactory` |
 | DB | `Phalcon\Db\Adapter\Pdo\Factory` → `Phalcon\Db\Adapter\PdoFactory` |
-| Filter | `Phalcon\Filter` → `Phalcon\Filter\Filter`；`Phalcon\FilterInterface` → `Phalcon\Filter\FilterInterface` |
+| Filter | 类本体保持 `Phalcon\Filter`（`Phalcon\Filter\Filter` 是 v5 名）；`Phalcon\FilterInterface` → `Phalcon\Filter\FilterInterface` |
 | Logger | `Phalcon\Logger\Adapter\File` → `Phalcon\Logger\Adapter\Stream` |
 | MVC | `Phalcon\Mvc\Collection` → `Phalcon\Collection` |
 | Paginator | `Phalcon\Paginator\Factory` → `Phalcon\Paginator\PaginatorFactory` |
@@ -474,7 +474,7 @@ $logger->push(new StreamAdapter('php://stdout'));
 自动改写为：
 
 ```php
-$logger = new \Phalcon\Logger\Logger('messages', [
+$logger = new \Phalcon\Logger('messages', [
     'stream_1' => new \Phalcon\Logger\Adapter\Stream('app.log'),
     'stream_2' => new \Phalcon\Logger\Adapter\Stream('php://stdout'),
 ]);
@@ -482,7 +482,7 @@ $logger = new \Phalcon\Logger\Logger('messages', [
 
 行为：
 
-- `Multiple` → 单个 `Phalcon\Logger\Logger`
+- `Multiple` → 单个 `Phalcon\Logger`
 - 每个受支持的 `push(new Adapter(...))` → Logger 构造参数中的命名 adapter
 - 支持 `File`、`Stream`、`Syslog`、`Blackhole` 到 v4 adapter 的映射；`File` → `Stream`
 - 命名按目标类短名和顺序生成：`stream_1`、`stream_2`
@@ -526,7 +526,7 @@ Factory::load([
 
 checklist 内容：
 
-1. 用单个 `Phalcon\Logger\Logger` 替换 `Phalcon\Logger\Multiple`。
+1. 用单个 `Phalcon\Logger` 替换 `Phalcon\Logger\Multiple`。
 2. 把每个 `push()` 目标变成 Logger 构造函数里的命名 adapter。
 3. 用 `Phalcon\Logger\AdapterFactory` 或 `Phalcon\Logger\Adapter\*` 创建 adapter，File 对应 Stream。
 4. 复核 formatter、log level 和每个 adapter 的 options。
@@ -600,7 +600,7 @@ checklist 内容：
 
 #### 4.4.6 Filter 自动改写族
 
-原先只对 Filter 输出 checklist，但 Phalcon 4 的 `Phalcon\Filter\Filter` 无参构造不再提供旧默认 sanitizer 集合；只改类名会留下运行时有问题的中间态。因此改为三条自动规则 + 一个缩窄的 TODO 规则。
+原先只对 Filter 输出 checklist，但 Phalcon 4 的 `Phalcon\Filter` 无参构造不再提供旧默认 sanitizer 集合（类本体在 v4 仍是 `Phalcon\Filter`）；只改常量会留下运行时有问题的中间态。因此改为三条自动规则 + 一个缩窄的 TODO 规则。
 
 ##### `FilterFactoryNewInstanceRector`
 
@@ -614,7 +614,7 @@ checklist 内容：
 
 ##### `FilterAddToSetRector`
 
-Phalcon 3 的 `$filter->add($name, $service)` 在 Phalcon 4 中变为 `$filter->set($name, $service)`。规则只处理能推断为 `Phalcon\Filter`、`Phalcon\Filter\Filter` 或 `Phalcon\Filter\FilterInterface` 的调用。
+Phalcon 3 的 `$filter->add($name, $service)` 在 Phalcon 4 中变为 `$filter->set($name, $service)`。规则只处理能推断为 `Phalcon\Filter` 或 `Phalcon\Filter\FilterInterface` 的调用。
 
 ##### `FilterSanitizerNameRector`
 
@@ -632,7 +632,7 @@ TODO 只保留给带自定义 mapper 参数的旧 Filter 构造，以及无法�
 
 checklist 内容：
 
-1. 显式给 `Phalcon\Filter\Filter` 传 sanitizer mapper，或通过 `Phalcon\Filter\FilterFactory::newInstance()` 注册。
+1. 显式给 `Phalcon\Filter` 传 sanitizer mapper，或通过 `Phalcon\Filter\FilterFactory::newInstance()` 注册。
 2. Phalcon 4 Filter 不再提供旧默认 sanitizer 集合，逐个复核配置。
 3. DI / 服务类型使用 `Phalcon\Filter\FilterInterface`。
 4. 复核 `sanitize()` 调用与 sanitizer 名称。
@@ -656,7 +656,7 @@ URI 表达式按以下顺序选择：
 
 1. 当前作用域有 `Phalcon\Http\Request` 或 `Phalcon\Http\RequestInterface` 类型的 `$request` 时，补 `$request->getURI()`。
 2. 当前作用域有 `Phalcon\Di\DiInterface` 类型的 `$di` 时，补 `$di->get('request')->getURI()`。
-3. 都没有时，补 `\Phalcon\Di\Di::getDefault()->get('request')->getURI()`。
+3. 都没有时，补 `\Phalcon\Di::getDefault()->get('request')->getURI()`。
 
 已有 URI 参数的调用以及无关对象的 `handle()` 会跳过。规则只补参数，不修改 DI 注册、rewrite rules 或路由配置；这些仍需人工复核。
 

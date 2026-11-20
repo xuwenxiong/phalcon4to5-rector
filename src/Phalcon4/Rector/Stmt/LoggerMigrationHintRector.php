@@ -39,7 +39,7 @@ final class LoggerMigrationHintRector extends AbstractRector
      * @var string[]
      */
     private const CHECKLIST = [
-        'Replace Phalcon\Logger\Multiple with a single Phalcon\Logger\Logger instance.',
+        'Replace Phalcon\Logger\Multiple with a single Phalcon\Logger instance.',
         'Turn each former push() target into a named adapter in the Logger constructor.',
         'Create adapters with Phalcon\Logger\AdapterFactory or Phalcon\Logger\Adapter\* classes (File became Stream).',
         'Recheck formatter, log level, and per-adapter options after the change.',

@@ -19,7 +19,6 @@ final class FilterAddToSetRector extends AbstractRector
      */
     private const FILTER_TYPES = [
         'Phalcon\Filter',
-        'Phalcon\Filter\Filter',
         'Phalcon\Filter\FilterInterface',
     ];
 

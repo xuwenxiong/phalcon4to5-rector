@@ -17,7 +17,7 @@ final class SomeClass
 
 namespace RectorPhalcon\Phalcon4\Tests\Phalcon40Set\Fixture;
 
-use Phalcon\Filter\Filter;
+use Phalcon\Filter;
 
 final class SomeClass
 {

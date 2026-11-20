@@ -78,8 +78,8 @@ final class ClassRenames
         // Factory
         'Phalcon\Factory' => 'Phalcon\Factory\AbstractFactory',
 
-        // Filter
-        'Phalcon\Filter' => 'Phalcon\Filter\Filter',
+        // Filter — in v4 the class stays Phalcon\Filter (Phalcon\Filter\Filter
+        // is the v5 name). Only the interface moved into the sub-namespace.
         'Phalcon\FilterInterface' => 'Phalcon\Filter\FilterInterface',
 
         // Flash

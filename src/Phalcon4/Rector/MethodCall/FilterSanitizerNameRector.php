@@ -28,7 +28,6 @@ final class FilterSanitizerNameRector extends AbstractRector
     private const METHOD_TYPES = [
         'sanitize' => [
             'Phalcon\Filter',
-            'Phalcon\Filter\Filter',
             'Phalcon\Filter\FilterInterface',
         ],
         'getPost' => [

@@ -25,12 +25,12 @@ use Rector\RuleDoc\RuleDefinition;
 
 /**
  * Phalcon 3 logger adapters had PSR-3 shortcuts (error(), info(), ...) directly
- * on the adapter. In Phalcon 4 those methods live on Phalcon\Logger\Logger; the
+ * on the adapter. In Phalcon 4 those methods live on Phalcon\Logger; the
  * adapter only writes low-level items. A plain class rename from Adapter\File
  * to Adapter\Stream therefore produces code that fatals at runtime with
  * "Call to undefined method ...Stream::error()".
  *
- * This rule wraps a directly-instantiated adapter in a Phalcon\Logger\Logger
+ * This rule wraps a directly-instantiated adapter in a Phalcon\Logger
  * when the variable is used with PSR-3 log method calls.
  */
 final class LoggerAdapterMethodCallsRector extends AbstractRector
@@ -59,7 +59,7 @@ final class LoggerAdapterMethodCallsRector extends AbstractRector
     public function getRuleDefinition(): RuleDefinition
     {
         return new RuleDefinition(
-            'Wrap a directly instantiated Phalcon logger adapter in Phalcon\Logger\Logger so PSR-3 log method calls keep working',
+            'Wrap a directly instantiated Phalcon logger adapter in Phalcon\Logger so PSR-3 log method calls keep working',
             [
                 new CodeSample(
                     <<<'CODE_SAMPLE'
@@ -68,7 +68,7 @@ $logger->error('message');
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$logger = new \Phalcon\Logger\Logger('messages', [
+$logger = new \Phalcon\Logger('messages', [
     'file' => new \Phalcon\Logger\Adapter\Stream('app.log'),
 ]);
 $logger->error('message');
@@ -115,7 +115,7 @@ CODE_SAMPLE
 
             $adapterNew = $assign->expr;
             $adapterKey = strtolower($this->shortClassName($targetClass));
-            $assign->expr = new New_(new FullyQualified('Phalcon\Logger\Logger'), [
+            $assign->expr = new New_(new FullyQualified('Phalcon\Logger'), [
                 new Arg(new String_('messages')),
                 new Arg(new Array_([
                     new ArrayItem(

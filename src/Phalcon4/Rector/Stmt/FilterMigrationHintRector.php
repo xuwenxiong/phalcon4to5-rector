@@ -30,7 +30,7 @@ final class FilterMigrationHintRector extends AbstractRector
      * @var string[]
      */
     private const CHECKLIST = [
-        'Pass a sanitizer mapper explicitly to Phalcon\Filter\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().',
+        'Pass a sanitizer mapper explicitly to Phalcon\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().',
         'Phalcon 4 Filter does not provide the old default sanitizer set; verify every configured sanitizer.',
         'Use Phalcon\Filter\FilterInterface as the DI/service type.',
         'Recheck sanitize() calls and sanitizer names after the change.',
@@ -48,7 +48,7 @@ CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
 // TODO Phalcon v4 Filter migration checklist: "Phalcon\Filter"
-// TODO Phalcon v4 Filter migration - 1) Pass a sanitizer mapper explicitly to Phalcon\Filter\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().
+// TODO Phalcon v4 Filter migration - 1) Pass a sanitizer mapper explicitly to Phalcon\Filter, or register it through Phalcon\Filter\FilterFactory::newInstance().
 $filter = new Phalcon\Filter($mapper);
 CODE_SAMPLE
                 ),

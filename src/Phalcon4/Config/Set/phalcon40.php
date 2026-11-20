@@ -103,16 +103,11 @@ return static function (RectorConfig $rectorConfig): void {
     }
 
     $rectorConfig->ruleWithConfiguration(RenameClassConstFetchRector::class, array_merge([
-        // Filter: v3 class references must become the v4 class as well, because
-        // the new class no longer owns the old constants.
-        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_ALPHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
-        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_APHANUM', 'Phalcon\Filter\Filter', 'FILTER_ALNUM'),
-        new RenameClassAndConstFetch('Phalcon\Filter', 'FILTER_SPECIAL_CHARS', 'Phalcon\Filter\Filter', 'FILTER_SPECIAL'),
-
-        // Filter: v4 class references, order-independent with RenameClassRector.
-        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_ALPHANUM', 'FILTER_ALNUM'),
-        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_APHANUM', 'FILTER_ALNUM'),
-        new RenameClassConstFetch('Phalcon\Filter\Filter', 'FILTER_SPECIAL_CHARS', 'FILTER_SPECIAL'),
+        // Filter: in v4 the class is still Phalcon\Filter (Phalcon\Filter\Filter
+        // is the v5 name). Only the constant names changed.
+        new RenameClassConstFetch('Phalcon\Filter', 'FILTER_ALPHANUM', 'FILTER_ALNUM'),
+        new RenameClassConstFetch('Phalcon\Filter', 'FILTER_APHANUM', 'FILTER_ALNUM'),
+        new RenameClassConstFetch('Phalcon\Filter', 'FILTER_SPECIAL_CHARS', 'FILTER_SPECIAL'),
     ], array_merge($dbConstFetchRenames, $dispatcherConstFetchRenames)));
 
     // ---------------------------------------------------------------------

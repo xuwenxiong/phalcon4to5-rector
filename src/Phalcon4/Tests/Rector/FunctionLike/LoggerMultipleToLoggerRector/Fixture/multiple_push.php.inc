@@ -29,7 +29,7 @@ final class SomeClass
 {
     public function run(): void
     {
-        $logger = new \Phalcon\Logger\Logger('messages', ['stream_1' => new \Phalcon\Logger\Adapter\Stream('app.log'), 'stream_2' => new \Phalcon\Logger\Adapter\Stream('php://stdout')]);
+        $logger = new \Phalcon\Logger('messages', ['stream_1' => new \Phalcon\Logger\Adapter\Stream('app.log'), 'stream_2' => new \Phalcon\Logger\Adapter\Stream('php://stdout')]);
         $logger->info('hello');
     }
 }

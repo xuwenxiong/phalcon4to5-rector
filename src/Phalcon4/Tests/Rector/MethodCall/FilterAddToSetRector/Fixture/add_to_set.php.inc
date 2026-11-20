@@ -3,10 +3,11 @@
 namespace RectorPhalcon\Phalcon4\Tests\Rector\MethodCall\FilterAddToSetRector\Fixture;
 
 use Phalcon\Filter;
+use Phalcon\Filter\FilterInterface;
 
 final class SomeClass
 {
-    public function run(Filter $filter, \Phalcon\Filter\Filter $v4Filter, SomeService $service): void
+    public function run(Filter $filter, FilterInterface $v4Filter, SomeService $service): void
     {
         $filter->add('md5', 'md5');
         $v4Filter->add('upper', 'upper');
@@ -19,10 +20,11 @@ final class SomeClass
 namespace RectorPhalcon\Phalcon4\Tests\Rector\MethodCall\FilterAddToSetRector\Fixture;
 
 use Phalcon\Filter;
+use Phalcon\Filter\FilterInterface;
 
 final class SomeClass
 {
-    public function run(Filter $filter, \Phalcon\Filter\Filter $v4Filter, SomeService $service): void
+    public function run(Filter $filter, FilterInterface $v4Filter, SomeService $service): void
     {
         $filter->set('md5', 'md5');
         $v4Filter->set('upper', 'upper');

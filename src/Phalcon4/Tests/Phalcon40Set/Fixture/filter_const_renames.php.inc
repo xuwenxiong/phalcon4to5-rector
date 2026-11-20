@@ -22,7 +22,7 @@ final class SomeClass
 
 namespace RectorPhalcon\Phalcon4\Tests\Phalcon40Set\Fixture;
 
-use Phalcon\Filter\Filter;
+use Phalcon\Filter;
 
 final class SomeClass
 {
@@ -31,9 +31,9 @@ final class SomeClass
      */
     public function run(array $options): void
     {
-        $alnum = \Phalcon\Filter\Filter::FILTER_ALNUM;
-        $special = \Phalcon\Filter\Filter::FILTER_SPECIAL;
-        $legacyTypo = \Phalcon\Filter\Filter::FILTER_ALNUM;
+        $alnum = Filter::FILTER_ALNUM;
+        $special = Filter::FILTER_SPECIAL;
+        $legacyTypo = \Phalcon\Filter::FILTER_ALNUM;
         $other = SomeService::FILTER_ALPHANUM;
     }
 }

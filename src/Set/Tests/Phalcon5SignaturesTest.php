@@ -17,6 +17,8 @@ final class Phalcon5SignaturesTest extends TestCase
         $this->assertContains('Phalcon\Filter\Validation', $classes);
         $this->assertContains('Phalcon\Di\Di', $classes);
         $this->assertContains('Phalcon\Encryption\Crypt', $classes);
+        // Phalcon\Filter\Filter is a v5-only name: in v4 the class is Phalcon\Filter.
+        $this->assertContains('Phalcon\Filter\Filter', $classes);
     }
 
     public function testV3AndV4SharedNamesAreExcluded(): void
@@ -26,7 +28,7 @@ final class Phalcon5SignaturesTest extends TestCase
         // Phalcon\Mvc\Url exists in v3 and v5 (only v4 used Phalcon\Url); it is
         // a v3 name, so it must NOT be treated as v5 evidence.
         $this->assertNotContains('Phalcon\Mvc\Url', $classes);
-        $this->assertNotContains('Phalcon\Filter\Filter', $classes);
+        $this->assertNotContains('Phalcon\Filter', $classes);
         $this->assertNotContains('Phalcon\Helper\Str', $classes);
         // Non-Phalcon targets such as `Exception` are excluded too.
         $this->assertNotContains('Exception', $classes);
@@ -42,7 +44,7 @@ final class Phalcon5SignaturesTest extends TestCase
 
     public function testDetectV3AndV4SourceDoesNotMatch(): void
     {
-        $this->assertSame([], Phalcon5Signatures::detect('use Phalcon\Mvc\Url; use Phalcon\Filter\Filter;'));
+        $this->assertSame([], Phalcon5Signatures::detect('use Phalcon\Mvc\Url; use Phalcon\Filter;'));
         $this->assertSame([], Phalcon5Signatures::detect('use Phalcon\Url; use Phalcon\Helper\Str;'));
     }
 }

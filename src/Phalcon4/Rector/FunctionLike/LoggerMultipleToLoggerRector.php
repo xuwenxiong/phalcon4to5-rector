@@ -52,7 +52,7 @@ $logger->push(new StreamAdapter('php://stdout'));
 CODE_SAMPLE
                     ,
                     <<<'CODE_SAMPLE'
-$logger = new \Phalcon\Logger\Logger('messages', [
+$logger = new \Phalcon\Logger('messages', [
     'file_1' => new \Phalcon\Logger\Adapter\Stream('app.log'),
     'stream_2' => new \Phalcon\Logger\Adapter\Stream('php://stdout'),
 ]);
@@ -137,7 +137,7 @@ CODE_SAMPLE
                 continue;
             }
 
-            $assign->expr = new New_(new FullyQualified('Phalcon\Logger\Logger'), [
+            $assign->expr = new New_(new FullyQualified('Phalcon\Logger'), [
                 new Arg(new String_('messages')),
                 new Arg(new Array_($adapterItems, ['kind' => Array_::KIND_SHORT])),
             ]);
