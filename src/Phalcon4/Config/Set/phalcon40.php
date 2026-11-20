@@ -7,6 +7,7 @@ use RectorPhalcon\Phalcon4\DbConstants;
 use RectorPhalcon\Phalcon4\DispatcherConstants;
 use RectorPhalcon\Phalcon4\Rector\Closure\SessionAdapterDiRector;
 use RectorPhalcon\Phalcon4\Rector\Expression\ModelSaveWithDataRector;
+use RectorPhalcon\Phalcon4\Rector\FileNode\LoggerAdapterMethodCallsRector;
 use RectorPhalcon\Phalcon4\Rector\FunctionLike\CacheFrontendBackendToCacheRector;
 use RectorPhalcon\Phalcon4\Rector\FunctionLike\LoggerMultipleToLoggerRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
@@ -61,6 +62,7 @@ return static function (RectorConfig $rectorConfig): void {
         CacheFactoryLoadRector::class,
         CacheMigrationHintRector::class,
         LoggerMultipleToLoggerRector::class,
+        LoggerAdapterMethodCallsRector::class,
         LoggerFactoryLoadRector::class,
         LoggerMigrationHintRector::class,
         SessionFactoryLoadRector::class,
