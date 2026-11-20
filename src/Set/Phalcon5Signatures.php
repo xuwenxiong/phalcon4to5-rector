@@ -60,7 +60,12 @@ final class Phalcon5Signatures
     {
         $matches = [];
         foreach (self::v5OnlyClasses() as $class) {
-            if (str_contains($code, $class)) {
+            // A plain substring match is wrong here: `Phalcon\Di\Di` is a
+            // prefix of the valid v4 interface `Phalcon\Di\DiInterface`, which
+            // would make every migrated v4 project look like Phalcon 5.
+            // Require the class name to end at a non-identifier boundary.
+            $pattern = '~' . preg_quote($class, '~') . '(?![A-Za-z0-9_\\\\])~';
+            if (preg_match($pattern, $code) === 1) {
                 $matches[] = $class;
             }
         }

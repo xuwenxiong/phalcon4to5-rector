@@ -47,4 +47,21 @@ final class Phalcon5SignaturesTest extends TestCase
         $this->assertSame([], Phalcon5Signatures::detect('use Phalcon\Mvc\Url; use Phalcon\Filter;'));
         $this->assertSame([], Phalcon5Signatures::detect('use Phalcon\Url; use Phalcon\Helper\Str;'));
     }
+
+    public function testV4DiInterfaceDoesNotMatchV5DiClass(): void
+    {
+        // Phalcon\Di\DiInterface is a valid v4 interface (migrated from v3's
+        // Phalcon\DiInterface). It must not be mistaken for the v5-only class
+        // Phalcon\Di\Di, which is a strict prefix of it.
+        $this->assertSame([], Phalcon5Signatures::detect(
+            "use Phalcon\\Di\\DiInterface;\n"
+            . "public function registerAutoloaders(DiInterface \$di = null) {}"
+        ));
+
+        // But the actual v5 class must still be detected.
+        $this->assertSame(
+            ['Phalcon\Di\Di'],
+            Phalcon5Signatures::detect('$di = \Phalcon\Di\Di::getDefault();')
+        );
+    }
 }
