@@ -47,8 +47,6 @@ composer require --dev xuwenxiong/rector-phalcon
 composer require --dev phalcon/ide-stubs:^4.0
 ```
 
-> 本包 `composer.json` 的 `require-dev` 中固定的 `phalcon/ide-stubs:^5.0` **仅用于本包自身的开发与测试**，不会传递给你的项目。Composer 只传递依赖的 `require`，不传递 `require-dev`，因此你完全可以按上表在自己项目里安装 `^4.0` 或 `^5.0`，与本包无冲突。
-
 ## 使用
 
 > [!WARNING]

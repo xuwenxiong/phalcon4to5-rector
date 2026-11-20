@@ -170,6 +170,10 @@ vendor/bin/rector-phalcon upgrade:3-to-5 --path src
 - 待处理路径优先从 CLI 参数解析（set 加载早于 Rector 设置 `PATHS`），回退到工作目录；排除 `vendor` 等常见目录；PHPUnit 环境自动跳过。
 - 误报时可设置环境变量 `RECTOR_PHALCON_SKIP_V5_GUARD=1` 跳过该检查。
 
+### 4.3 stubs 版本与依赖传递
+
+本包 `composer.json` 的 `require-dev` 中固定的 `phalcon/ide-stubs:^5.0` **仅用于本包自身的开发与测试**，不会传递给使用本包的项目。Composer 只传递依赖的 `require`，不传递 `require-dev`，因此用户可以按阶段在自己项目里安装 `^4.0`（3 → 4）或 `^5.0`（4 → 5），与本包无冲突。
+
 ---
 
 ## 五、入口形态选择
