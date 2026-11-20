@@ -13,6 +13,7 @@ use RectorPhalcon\Phalcon4\Rector\FunctionLike\LoggerMultipleToLoggerRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\AddHandleUriArgumentRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterAddToSetRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\FilterSanitizerNameRector;
+use RectorPhalcon\Phalcon4\Rector\MethodCall\RegisterEnginesClosureRector;
 use RectorPhalcon\Phalcon4\Rector\MethodCall\RenameCliConsoleAddModulesRector;
 use RectorPhalcon\Phalcon4\Rector\New_\FilterFactoryNewInstanceRector;
 use RectorPhalcon\Phalcon4\Rector\PropertyFetch\RenamePaginatorBeforePropertyRector;
@@ -74,6 +75,7 @@ return static function (RectorConfig $rectorConfig): void {
         FilterMigrationHintRector::class,
         GetSourceToSetSourceRector::class,
         AddHandleUriArgumentRector::class,
+        RegisterEnginesClosureRector::class,
         ModelSaveWithDataRector::class,
         RenameUseImportsRector::class,
         RenamePaginatorBeforePropertyRector::class,
